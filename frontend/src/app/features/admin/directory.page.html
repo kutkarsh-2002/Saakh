@@ -241,10 +241,12 @@
                 <span class="sub">{{ profile.state }}</span>
               </td>
               <td>
-                <sk-status-pill [verification]="profile.verificationStatus" />
-                @if (profile.gstinVerified) {
-                  <sk-verification-badge [verified]="true" size="sm" />
-                }
+                <div class="cell-pills">
+                  <sk-status-pill [verification]="profile.verificationStatus" />
+                  @if (profile.gstinVerified) {
+                    <sk-verification-badge [verified]="true" size="sm" />
+                  }
+                </div>
               </td>
               <td>
                 <sk-status-pill [availability]="profile.availabilityStatus" />

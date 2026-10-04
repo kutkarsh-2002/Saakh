@@ -184,6 +184,15 @@
   color: var(--sk-ink-strong);
 }
 
+// A pill and the GSTIN badge share one cell; Angular strips the whitespace
+// between them, so the gap has to be real.
+.cell-pills {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 5px 6px;
+}
+
 .dir-card__pills {
   display: flex;
   gap: var(--sk-space-1);

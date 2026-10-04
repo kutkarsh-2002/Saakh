@@ -131,9 +131,19 @@
 // Flags
 // -----------------------------------------------------------------------------
 
+// The pill and its flags are separate chips that can appear in any combination,
+// so they are laid out with a real gap rather than margins on each one. Angular
+// strips the whitespace between inline elements, which is what left the halt flag
+// touching the pill.
+.state {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 5px 6px;
+}
+
 .fault {
   display: inline-block;
-  margin-top: 4px;
   padding: 1px 7px;
   border-radius: var(--sk-radius-pill);
   background: var(--sk-halted-soft);
@@ -156,8 +166,6 @@
   display: inline-flex;
   align-items: center;
   gap: 3px;
-  margin-top: 4px;
-  margin-left: 4px;
   padding: 1px 7px;
   border-radius: var(--sk-radius-pill);
   background: var(--sk-open-soft);

@@ -96,26 +96,28 @@ import { VerificationBadge } from './verification-badge';
               </td>
 
               <td>
-                <sk-status-pill [dealState]="row.dealState" />
-                @if (row.iHaltedThisDeal) {
-                  <span
-                    class="fault"
-                    matTooltip="You triggered this halt, so it is recorded against your profile under the v1 rule."
-                  >
-                    you halted
-                  </span>
-                } @else if (row.dealState === DealState.Halted && row.haltedByName) {
-                  <span class="fault fault--them">{{ row.haltedByName }} halted</span>
-                }
-                @if (row.frozen) {
-                  <span
-                    class="frozen"
-                    matTooltip="One party's account is restricted by an administrator, so this deal cannot change state."
-                  >
-                    <span class="material-symbols-rounded" aria-hidden="true">ac_unit</span>
-                    frozen
-                  </span>
-                }
+                <div class="state">
+                  <sk-status-pill [dealState]="row.dealState" />
+                  @if (row.iHaltedThisDeal) {
+                    <span
+                      class="fault"
+                      matTooltip="You triggered this halt, so it is recorded against your profile under the v1 rule."
+                    >
+                      you halted
+                    </span>
+                  } @else if (row.dealState === DealState.Halted && row.haltedByName) {
+                    <span class="fault fault--them">{{ row.haltedByName }} halted</span>
+                  }
+                  @if (row.frozen) {
+                    <span
+                      class="frozen"
+                      matTooltip="One party's account is restricted by an administrator, so this deal cannot change state."
+                    >
+                      <span class="material-symbols-rounded" aria-hidden="true">ac_unit</span>
+                      frozen
+                    </span>
+                  }
+                </div>
               </td>
 
               @if (showRatings()) {
