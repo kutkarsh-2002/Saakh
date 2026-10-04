@@ -1,0 +1,112 @@
+.charts {
+  display: grid;
+  gap: var(--sk-space-4);
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 1040px) {
+  .charts {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.chart {
+  display: grid;
+  // The caveat row is pinned to the bottom so both cards align when the charts
+  // sit side by side.
+  grid-template-rows: auto 1fr auto;
+  overflow: hidden;
+}
+
+.chart__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--sk-space-3);
+  flex-wrap: wrap;
+  padding: var(--sk-space-3) var(--sk-space-4);
+  border-bottom: 1px solid var(--sk-line-hairline);
+}
+
+.chart__head h3 {
+  margin: 0;
+}
+
+.chart__legend {
+  display: flex;
+  gap: var(--sk-space-3);
+  flex-wrap: wrap;
+}
+
+.key {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--sk-ink-muted);
+  white-space: nowrap;
+}
+
+.key__swatch {
+  width: 14px;
+  height: 10px;
+  border-radius: 2px;
+}
+
+.key--opened .key__swatch {
+  background: var(--sk-open);
+}
+
+// The closed series is dashed in the chart, so its key is dashed too.
+.key--closed .key__swatch {
+  background: repeating-linear-gradient(
+    90deg,
+    var(--sk-completed) 0 4px,
+    transparent 4px 7px
+  );
+  height: 3px;
+}
+
+.key--clean .key__swatch {
+  background: var(--sk-completed);
+}
+
+.key--halted .key__swatch {
+  background: var(--sk-halted);
+}
+
+.chart__canvas {
+  position: relative;
+  // Tall enough that nine monthly buckets stay readable on a phone.
+  height: 220px;
+  padding: var(--sk-space-3) var(--sk-space-4) 0;
+}
+
+@media (min-width: 760px) {
+  .chart__canvas {
+    height: 260px;
+  }
+}
+
+.chart__caveat {
+  display: flex;
+  gap: var(--sk-space-2);
+  margin: var(--sk-space-3) 0 0;
+  padding: var(--sk-space-3) var(--sk-space-4);
+  background: var(--sk-surface-sunken);
+  border-top: 1px solid var(--sk-line-hairline);
+  font-size: 0.8125rem;
+  line-height: 1.55;
+  color: var(--sk-ink-muted);
+}
+
+.chart__caveat strong {
+  color: var(--sk-ink);
+}
+
+.chart__caveat .material-symbols-rounded {
+  font-size: 1.125rem;
+  flex: none;
+  color: var(--sk-ink-subtle);
+}

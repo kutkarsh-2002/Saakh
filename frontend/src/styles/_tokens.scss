@@ -1,0 +1,129 @@
+// =============================================================================
+// Saakh design tokens
+// =============================================================================
+// The product's value proposition is interpersonal trust, not transaction
+// processing, so the palette is warm and grounded rather than cold fintech blue.
+// Every value here is a token: no screen hard-codes a colour.
+//
+// Contrast: every foreground/background pair below clears 4.5:1 on the surface
+// it is used against, because this is read outdoors in direct sunlight on
+// budget Android screens.
+// =============================================================================
+
+:root {
+  // ---- Ground ---------------------------------------------------------------
+  // Warm paper, never pure white: less glare in bright light, and it reads as a
+  // physical ledger rather than a web app.
+  --sk-canvas: #faf6ef;
+  --sk-surface: #fffdf9;
+  --sk-surface-sunken: #f3ece1;
+  --sk-surface-raised: #ffffff;
+
+  // ---- Ink ------------------------------------------------------------------
+  --sk-ink: #20170f; // 15.8:1 on surface
+  --sk-ink-strong: #0f0a06;
+  --sk-ink-muted: #5f5347; // 6.6:1 on surface
+  --sk-ink-subtle: #7d7064; // 4.7:1 on surface - labels only, never body text
+  --sk-ink-inverse: #fffdf9;
+
+  // ---- Lines ----------------------------------------------------------------
+  --sk-line: #e2d7c7;
+  --sk-line-strong: #c9bba6;
+  --sk-line-hairline: #efe7da;
+
+  // ---- Brand ----------------------------------------------------------------
+  // Deep pine: confident and trustworthy without being corporate blue. Carries
+  // primary actions and the Active verification state.
+  --sk-brand: #15543f;
+  --sk-brand-hover: #114634;
+  --sk-brand-strong: #0e3d2d;
+  --sk-brand-soft: #e3efe9;
+  --sk-brand-soft-ink: #0e3d2d;
+  --sk-brand-ring: #15543f40;
+
+  // Marigold: the second accent. Ratings and anything in progress.
+  --sk-accent: #b35f0a;
+  --sk-accent-strong: #8e4a05;
+  --sk-accent-soft: #fbeedd;
+  --sk-accent-soft-ink: #7a3f04;
+  --sk-star: #c87d10;
+
+  // ---- Status ---------------------------------------------------------------
+  // Chosen so no two statuses are distinguishable by hue alone: each differs in
+  // lightness as well, and each is always paired with its own icon shape and a
+  // text label. See the status-pill component.
+  --sk-open: #15607d; // steel teal
+  --sk-open-soft: #e2eff4;
+  --sk-open-soft-ink: #0f4a60;
+
+  --sk-progress: #b35f0a; // marigold
+  --sk-progress-soft: #fbeedd;
+  --sk-progress-soft-ink: #7a3f04;
+
+  --sk-completed: #15543f; // pine
+  --sk-completed-soft: #e3efe9;
+  --sk-completed-soft-ink: #0e3d2d;
+
+  --sk-halted: #a62019; // red
+  --sk-halted-soft: #fae7e5;
+  --sk-halted-soft-ink: #7f1810;
+
+  --sk-needs-approval: #8a5a00; // dark amber
+  --sk-needs-approval-soft: #fbf0d8;
+  --sk-needs-approval-soft-ink: #6b4600;
+
+  --sk-pending: #4c3f87; // muted violet
+  --sk-pending-soft: #eae7f6;
+  --sk-pending-soft-ink: #3a3068;
+
+  --sk-rejected: #8c1d18; // deep red
+  --sk-rejected-soft: #f8e4e2;
+  --sk-rejected-soft-ink: #6e1612;
+
+  --sk-inactive: #5f5347; // warm grey
+  --sk-inactive-soft: #eee7dc;
+  --sk-inactive-soft-ink: #4a4037;
+
+  --sk-suspended: #6b2159; // plum
+  --sk-suspended-soft: #f4e5f0;
+  --sk-suspended-soft-ink: #531943;
+
+  --sk-removed: #3f3730;
+  --sk-removed-soft: #e5ded6;
+  --sk-removed-soft-ink: #302a24;
+
+  // ---- Type -----------------------------------------------------------------
+  // Two families, each doing one job. Fraunces carries headings and trust
+  // moments: it has a voice, which a trust record should. IBM Plex Sans carries
+  // every control, table and figure: it has true tabular numerals and stays
+  // legible at 12px on a cheap screen.
+  --sk-font-display: 'Fraunces', 'Georgia', 'Times New Roman', serif;
+  --sk-font-ui: 'IBM Plex Sans', 'Segoe UI', system-ui, -apple-system, sans-serif;
+
+  // ---- Scale ----------------------------------------------------------------
+  --sk-space-1: 4px;
+  --sk-space-2: 8px;
+  --sk-space-3: 12px;
+  --sk-space-4: 16px;
+  --sk-space-5: 24px;
+  --sk-space-6: 32px;
+  --sk-space-7: 48px;
+  --sk-space-8: 64px;
+
+  --sk-radius-sm: 6px;
+  --sk-radius: 10px;
+  --sk-radius-lg: 16px;
+  --sk-radius-pill: 999px;
+
+  // Shadows stay restrained: this is a back-office tool, not a consumer card deck.
+  --sk-shadow-sm: 0 1px 2px rgb(32 23 15 / 8%);
+  --sk-shadow: 0 2px 6px rgb(32 23 15 / 9%), 0 1px 2px rgb(32 23 15 / 5%);
+  --sk-shadow-lg: 0 12px 32px rgb(32 23 15 / 14%), 0 2px 6px rgb(32 23 15 / 8%);
+
+  // The minimum touch target for this user base: one-handed, outdoors, often
+  // with a cracked screen protector.
+  --sk-touch: 44px;
+
+  --sk-header-height: 64px;
+  --sk-content-max: 1400px;
+}

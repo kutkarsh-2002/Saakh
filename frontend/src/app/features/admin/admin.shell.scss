@@ -1,0 +1,146 @@
+.head {
+  margin-bottom: var(--sk-space-4);
+}
+
+.head h1 {
+  margin: 0;
+}
+
+.head .sk-lede {
+  margin: var(--sk-space-1) 0 0;
+  font-size: 0.9375rem;
+}
+
+// -----------------------------------------------------------------------------
+// Counter strip
+// -----------------------------------------------------------------------------
+// Tighter than the trader-facing stat tiles: an ops console shows more numbers
+// in less space, and the admin reads them all at once.
+
+.counters {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 9.5rem), 1fr));
+  gap: var(--sk-space-2);
+  margin-bottom: var(--sk-space-4);
+}
+
+.counter {
+  display: grid;
+  gap: 0;
+  padding: var(--sk-space-2) var(--sk-space-3);
+  background: var(--sk-surface);
+  border: 1px solid var(--sk-line);
+  border-radius: var(--sk-radius);
+  text-decoration: none;
+  color: inherit;
+}
+
+.counter:hover {
+  border-color: var(--sk-ink-subtle);
+  background: var(--sk-surface-sunken);
+}
+
+.counter--static {
+  cursor: default;
+}
+
+.counter--static:hover {
+  border-color: var(--sk-line);
+  background: var(--sk-surface);
+}
+
+// The queue an admin is accountable for clearing is the one that gets the
+// accent treatment; the rest stay neutral so it does not compete.
+.counter--urgent {
+  background: var(--sk-accent-soft);
+  border-color: var(--sk-accent);
+  box-shadow: inset 0 0 0 1px var(--sk-accent);
+}
+
+.counter--urgent:hover {
+  background: var(--sk-accent-soft);
+  border-color: var(--sk-accent-strong);
+}
+
+.counter__label {
+  font-size: 0.625rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--sk-ink-muted);
+}
+
+.counter--urgent .counter__label {
+  color: var(--sk-accent-soft-ink);
+}
+
+.counter__value {
+  font-size: 1.5rem;
+  line-height: 1.15;
+  color: var(--sk-ink-strong);
+}
+
+.counter--urgent .counter__value {
+  color: var(--sk-accent-strong);
+}
+
+.counter__hint {
+  font-size: 0.6875rem;
+  color: var(--sk-ink-subtle);
+}
+
+.counter--urgent .counter__hint {
+  color: var(--sk-accent-soft-ink);
+}
+
+// -----------------------------------------------------------------------------
+// Tabs
+// -----------------------------------------------------------------------------
+
+.tabs {
+  display: flex;
+  gap: var(--sk-space-1);
+  margin-bottom: var(--sk-space-4);
+  border-bottom: 1px solid var(--sk-line);
+  overflow-x: auto;
+}
+
+.tabs__link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: var(--sk-touch);
+  padding: 0 var(--sk-space-3);
+  border-bottom: 3px solid transparent;
+  color: var(--sk-ink-muted);
+  font-size: 0.9375rem;
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.tabs__link:hover {
+  color: var(--sk-ink);
+}
+
+.tabs__link--on {
+  color: var(--sk-brand);
+  border-bottom-color: var(--sk-brand);
+}
+
+.tabs__link .material-symbols-rounded {
+  font-size: 1.25rem;
+}
+
+.tabs__badge {
+  display: grid;
+  place-items: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 5px;
+  border-radius: var(--sk-radius-pill);
+  background: var(--sk-accent);
+  color: var(--sk-ink-inverse);
+  font-size: 0.6875rem;
+  font-weight: 700;
+}

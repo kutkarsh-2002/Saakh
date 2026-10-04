@@ -1,0 +1,102 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  backend:
+    name: Backend build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+
+      - name: Restore
+        run: dotnet restore Saakh.sln
+
+      - name: Build
+        run: dotnet build Saakh.sln --no-restore -c Release
+
+      # Unit tests need nothing but the runtime, so they gate fast.
+      - name: Unit tests
+        run: >
+          dotnet test backend/Saakh.Tests/Saakh.Tests.csproj
+          --no-build -c Release --filter "FullyQualifiedName~Unit"
+          --logger "trx;LogFileName=unit.trx"
+
+      # Integration tests start a real SQL Server through Testcontainers and run
+      # the application against it. This is the step that catches the things only
+      # a container shows: the schema's cascade rules, startup ordering, and the
+      # SQL client's culture requirements.
+      - name: Integration tests
+        run: >
+          dotnet test backend/Saakh.Tests/Saakh.Tests.csproj
+          --no-build -c Release --filter "FullyQualifiedName~Integration"
+          --logger "trx;LogFileName=integration.trx"
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: "**/TestResults/*.trx"
+          if-no-files-found: ignore
+
+      # The default build is what ships, so it is the one that must stay clean.
+      - name: Audit packages
+        run: |
+          dotnet list backend/Saakh.Api/Saakh.Api.csproj package --vulnerable --include-transitive 2>&1 | tee audit.txt
+          ! grep -q 'has the following vulnerable packages' audit.txt
+
+      # Catches a model change that was never turned into a migration, which
+      # would otherwise only surface at deploy time.
+      - name: Check for model changes with no migration
+        run: |
+          dotnet tool install --global dotnet-ef --version 9.*
+          dotnet ef migrations has-pending-model-changes \
+            --project backend/Saakh.Api/Saakh.Api.csproj
+
+  frontend:
+    name: Frontend build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install
+        run: npm ci
+        working-directory: frontend
+
+      # The production configuration is what the container ships, and it is the
+      # one that enforces the bundle budgets.
+      - name: Build
+        run: npm run build -- --configuration production
+        working-directory: frontend
+
+      - name: Unit tests
+        run: npm test -- --watch=false --browsers=ChromeHeadless
+        working-directory: frontend
+        env:
+          # The ubuntu runner ships Chrome, but Karma will not find it unaided.
+          CHROME_BIN: /usr/bin/google-chrome
+
+  compose:
+    name: Compose config
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate docker-compose.yml
+        run: |
+          cp .env.example .env
+          docker compose config --quiet

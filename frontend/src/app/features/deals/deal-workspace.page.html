@@ -1,0 +1,423 @@
+<div class="sk-page">
+  <nav class="crumbs" aria-label="Breadcrumb">
+    <a routerLink="/deals">
+      <span class="material-symbols-rounded" aria-hidden="true">arrow_back</span>
+      Open deals
+    </a>
+  </nav>
+
+  @if (loading()) {
+    <div class="sk-card"><sk-loading [count]="8" label="Loading the deal" /></div>
+  } @else if (detail(); as view) {
+    @if (view.deal; as deal) {
+      <!-- ===== Header ===================================================== -->
+      <header class="head sk-card sk-card-pad">
+        <div class="head__top">
+          <div class="head__id">
+            <p class="sk-eyebrow">Deal</p>
+            <h1 class="head__ref">{{ deal.reference }}</h1>
+          </div>
+          <sk-status-pill [dealState]="deal.dealState" size="lg" />
+        </div>
+
+        <!-- The state machine, drawn as a strip: the spec calls this the most
+             important pattern in the product, so it is visible before anything
+             else on the screen. -->
+        <ol class="stages" aria-label="Deal progress">
+          @for (step of [1, 2, 3]; track step) {
+            <li
+              class="stages__step"
+              [class.stages__step--done]="stage() > step"
+              [class.stages__step--on]="stage() === step"
+              [class.stages__step--dead]="deal.dealState === DealState.Halted"
+              [attr.aria-current]="stage() === step ? 'step' : null"
+            >
+              <span class="stages__dot" aria-hidden="true">
+                <span class="material-symbols-rounded">
+                  {{
+                    step === 1
+                      ? 'radio_button_unchecked'
+                      : step === 2
+                        ? 'sync'
+                        : 'task_alt'
+                  }}
+                </span>
+              </span>
+              <span class="stages__label">
+                {{ step === 1 ? 'Open' : step === 2 ? 'In progress' : 'Completed' }}
+              </span>
+            </li>
+          }
+
+          @if (deal.dealState === DealState.Halted) {
+            <li class="stages__step stages__step--halted">
+              <span class="stages__dot" aria-hidden="true">
+                <span class="material-symbols-rounded">flag</span>
+              </span>
+              <span class="stages__label">Halted</span>
+            </li>
+          }
+        </ol>
+
+        @if (deal.dealState === DealState.Halted) {
+          <p class="halted-note">
+            <span class="material-symbols-rounded" aria-hidden="true">flag</span>
+            <span>
+              @if (deal.iHaltedThisDeal) {
+                <strong>You halted this deal</strong>
+                {{ deal.haltedAt ? 'on ' + formatDate(deal.haltedAt) : '' }}, so under the v1 rule
+                it is recorded at your fault and counts against your profile.
+              } @else {
+                <strong>{{ deal.haltedByName }} halted this deal</strong>
+                {{ deal.haltedAt ? 'on ' + formatDate(deal.haltedAt) : '' }}. Because they
+                triggered it, the halt is recorded at their fault.
+              }
+              It does not resolve on its own — it stays stalled until you both agree to resume.
+            </span>
+          </p>
+        }
+
+        @if (deal.frozen) {
+          <p class="frozen-note">
+            <span class="material-symbols-rounded" aria-hidden="true">ac_unit</span>
+            <span>
+              <strong>This deal is frozen.</strong>
+              One party's account is restricted by an administrator, so no state change is possible
+              until that is resolved.
+            </span>
+          </p>
+        }
+      </header>
+
+      <div class="layout">
+        <!-- ===== Left column ============================================== -->
+        <div class="col">
+          <!-- Ticket terms -->
+          <section class="sk-card sk-card-pad terms">
+            <h2>Ticket terms</h2>
+            <p class="sk-meta terms__intro">
+              What both of you agreed when the ticket was raised. These do not change once the deal
+              exists.
+            </p>
+
+            <dl class="terms__grid">
+              <div class="terms__item terms__item--hero">
+                <dt>{{ deal.category === DealCategory.Money ? 'Amount' : 'Quantity' }}</dt>
+                <dd class="sk-figure terms__hero">{{ amount() }}</dd>
+              </div>
+
+              <div class="terms__item">
+                <dt>Category</dt>
+                <dd>
+                  <span class="cat">
+                    <span class="material-symbols-rounded" aria-hidden="true">{{
+                      categoryMeta[deal.category].icon
+                    }}</span>
+                    {{ deal.subType?.displayName ?? categoryMeta[deal.category].label }}
+                  </span>
+                </dd>
+              </div>
+
+              <div class="terms__item" [class.terms__item--warn]="overdue()">
+                <dt>Estimated settlement</dt>
+                <dd>
+                  {{ formatDate(deal.estimatedSettlementTime) }}
+                  @if (settlementNote()) {
+                    <span class="terms__sub">{{ settlementNote() }}</span>
+                  }
+                </dd>
+              </div>
+
+              <div class="terms__item">
+                <dt>Your side</dt>
+                <dd>
+                  <span class="cat">
+                    <span class="material-symbols-rounded" aria-hidden="true">{{
+                      roleMeta[deal.mySide].icon
+                    }}</span>
+                    {{ deal.mySide === ProfileRole.Lender ? 'You are the Lender' : 'You are the Seeker' }}
+                  </span>
+                </dd>
+              </div>
+
+              <div class="terms__item">
+                <dt>Where</dt>
+                <dd>{{ deal.district }}, {{ deal.state }}</dd>
+              </div>
+
+              <div class="terms__item">
+                <dt>Opened</dt>
+                <dd>{{ formatDate(deal.createdAt) }}</dd>
+              </div>
+
+              @if (deal.materialDescription) {
+                <div class="terms__item terms__item--wide">
+                  <dt>Material</dt>
+                  <dd>{{ deal.materialDescription }}</dd>
+                </div>
+              }
+
+              <div class="terms__item terms__item--wide">
+                <dt>The arrangement</dt>
+                <dd class="terms__desc">{{ deal.description }}</dd>
+              </div>
+            </dl>
+
+            <p class="terms__disclaimer">
+              <span class="material-symbols-rounded" aria-hidden="true">info</span>
+              Saakh does not hold or move the money or the material. This records what you agreed
+              and tracks how it ends.
+            </p>
+          </section>
+
+          <!-- Chat -->
+          <section class="sk-card chat">
+            <header class="chat__head">
+              <div>
+                <h2>Conversation</h2>
+                <p class="sk-meta">
+                  Carried over from your negotiation and kept as part of this deal's permanent
+                  record.
+                </p>
+              </div>
+            </header>
+
+            <sk-chat-thread
+              [messages]="view.messages"
+              [canSend]="true"
+              [sending]="sending()"
+              [placeholder]="'Message ' + deal.counterparty.name"
+              emptyTitle="No messages on this deal yet"
+              emptyMessage="Use this to confirm dispatch dates, flag a delay early, or agree a change. It stays on the record."
+              (sent)="send($event)"
+            />
+          </section>
+        </div>
+
+        <!-- ===== Right column ============================================= -->
+        <div class="col">
+          <!-- Actions -->
+          <section class="sk-card sk-card-pad actions">
+            <h2>What you can do now</h2>
+
+            @if (deal.dealState === DealState.Open) {
+              <p class="actions__context">
+                Terms are agreed and nothing has moved yet. Mark the deal in progress once money or
+                material actually starts moving.
+              </p>
+              <button
+                type="button"
+                class="sk-btn sk-btn--primary sk-btn--block"
+                [disabled]="busy() || !canStartProgress()"
+                (click)="startProgress()"
+              >
+                <span class="material-symbols-rounded" aria-hidden="true">play_arrow</span>
+                Transfer has started
+              </button>
+            }
+
+            @if (deal.dealState === DealState.Progress) {
+              <p class="actions__context">
+                Money or material is moving. Confirm settlement once your side of the obligation is
+                fully cleared.
+              </p>
+
+              <!-- Settlement needs both parties, so both halves are shown. -->
+              <div class="confirm">
+                <div class="confirm__row" [class.confirm__row--on]="deal.mySettlementConfirmed">
+                  <span class="material-symbols-rounded" aria-hidden="true">
+                    {{ deal.mySettlementConfirmed ? 'check_circle' : 'radio_button_unchecked' }}
+                  </span>
+                  <span>You {{ deal.mySettlementConfirmed ? 'have confirmed' : 'have not confirmed' }}</span>
+                </div>
+                <div class="confirm__row" [class.confirm__row--on]="deal.theirSettlementConfirmed">
+                  <span class="material-symbols-rounded" aria-hidden="true">
+                    {{ deal.theirSettlementConfirmed ? 'check_circle' : 'radio_button_unchecked' }}
+                  </span>
+                  <span>
+                    {{ deal.counterparty.name }}
+                    {{ deal.theirSettlementConfirmed ? 'has confirmed' : 'has not confirmed' }}
+                  </span>
+                </div>
+              </div>
+
+              @if (!deal.mySettlementConfirmed) {
+                <button
+                  type="button"
+                  class="sk-btn sk-btn--primary sk-btn--block"
+                  [disabled]="busy() || !canSettle()"
+                  (click)="confirmSettlement()"
+                >
+                  <span class="material-symbols-rounded" aria-hidden="true">done_all</span>
+                  Confirm settlement
+                </button>
+              } @else {
+                <p class="actions__waiting">
+                  <span class="material-symbols-rounded" aria-hidden="true">hourglass_top</span>
+                  Waiting on {{ deal.counterparty.name }} to confirm. The deal completes the moment
+                  they do.
+                </p>
+              }
+            }
+
+            @if (canHalt()) {
+              <button
+                type="button"
+                class="sk-btn sk-btn--destructive sk-btn--block"
+                [disabled]="busy()"
+                (click)="halt()"
+              >
+                <span class="material-symbols-rounded" aria-hidden="true">flag</span>
+                Halt this deal
+              </button>
+              <p class="actions__warn">
+                Whoever halts a deal is recorded at fault for it. If the hold-up is on their side,
+                message them first — that conversation stays on the record too.
+              </p>
+            }
+
+            @if (deal.dealState === DealState.Halted) {
+              @if (deal.pendingResumeRequest; as request) {
+                @if (request.requestedByMe) {
+                  <p class="actions__waiting">
+                    <span class="material-symbols-rounded" aria-hidden="true">hourglass_top</span>
+                    You asked to resume. The deal only moves back to Progress once
+                    {{ deal.counterparty.name }} accepts.
+                  </p>
+                } @else {
+                  <p class="actions__context">
+                    <strong>{{ deal.counterparty.name }} wants to resume this deal.</strong>
+                    Accepting moves it straight back to Progress.
+                  </p>
+                  <button
+                    type="button"
+                    class="sk-btn sk-btn--primary sk-btn--block"
+                    (click)="acceptResume()"
+                  >
+                    <span class="material-symbols-rounded" aria-hidden="true">replay</span>
+                    Agree to resume
+                  </button>
+                  <button
+                    type="button"
+                    class="sk-btn sk-btn--secondary sk-btn--block"
+                    (click)="declineResume()"
+                  >
+                    Decline
+                  </button>
+                }
+              } @else {
+                <p class="actions__context">
+                  A halted deal can be reopened, but only if you both agree. Send a request and the
+                  other party decides.
+                </p>
+                <button
+                  type="button"
+                  class="sk-btn sk-btn--secondary sk-btn--block"
+                  (click)="requestResume()"
+                >
+                  <span class="material-symbols-rounded" aria-hidden="true">replay</span>
+                  Ask to resume
+                </button>
+              }
+            }
+
+            <!-- Rating opens once the deal is Completed or Halted. -->
+            @if (deal.canRate) {
+              <hr class="sk-divider" />
+              <p class="actions__context">
+                This deal is closed. Rate {{ deal.counterparty.name }} to turn it into a trust
+                signal — one rating per party, and it cannot be changed later.
+              </p>
+              <button type="button" class="sk-btn sk-btn--primary sk-btn--block" (click)="rate()">
+                <span class="material-symbols-rounded" aria-hidden="true">star</span>
+                Rate {{ deal.counterparty.name }}
+              </button>
+            }
+
+            @if (deal.dealState === DealState.Completed && !deal.canRate && deal.ratingGiven) {
+              <hr class="sk-divider" />
+              <p class="actions__done">
+                <span class="material-symbols-rounded" aria-hidden="true">task_alt</span>
+                Settled and rated. Nothing more to do here.
+              </p>
+            }
+          </section>
+
+          <!-- Ratings on this deal -->
+          @if (deal.ratingGiven || deal.ratingReceived) {
+            <section class="sk-card sk-card-pad">
+              <h2>Ratings on this deal</h2>
+
+              <div class="rating">
+                <p class="sk-eyebrow">You rated them</p>
+                @if (deal.ratingGiven; as given) {
+                  <sk-star-rating [value]="given.stars" size="lg" />
+                  @if (given.comment) {
+                    <blockquote class="rating__note">{{ given.comment }}</blockquote>
+                  }
+                  <p class="sk-meta">{{ formatDate(given.createdAt) }}</p>
+                } @else {
+                  <p class="rating__none">Not yet rated by you.</p>
+                }
+              </div>
+
+              <hr class="sk-divider" />
+
+              <div class="rating">
+                <p class="sk-eyebrow">They rated you</p>
+                @if (deal.ratingReceived; as received) {
+                  <sk-star-rating [value]="received.stars" size="lg" />
+                  @if (received.comment) {
+                    <blockquote class="rating__note">{{ received.comment }}</blockquote>
+                  }
+                  <p class="sk-meta">{{ formatDate(received.createdAt) }}</p>
+                } @else {
+                  <p class="rating__none">
+                    They have not rated this deal yet. Nobody is notified to chase it.
+                  </p>
+                }
+              </div>
+            </section>
+          }
+
+          <!-- Counterparty -->
+          <section class="sk-card sk-card-pad">
+            <div class="party__head">
+              <a class="party__name" [routerLink]="['/counterparties', deal.counterparty.id]">
+                {{ deal.counterparty.name }}
+              </a>
+              <sk-verification-badge
+                [verified]="deal.counterparty.gstinVerified"
+                [legalName]="deal.counterparty.gstinLegalName"
+                [gstin]="deal.counterparty.gstinMasked"
+                [showUnverified]="!deal.counterparty.gstinVerified"
+                size="sm"
+              />
+            </div>
+
+            <p class="sk-meta party__meta">
+              {{ roleMeta[deal.counterparty.role].label }}
+              <span aria-hidden="true">·</span>
+              {{ deal.counterparty.district }}, {{ deal.counterparty.state }}
+              <span aria-hidden="true">·</span>
+              capacity {{ counterpartyCapacity() }}
+            </p>
+
+            <hr class="sk-divider" />
+
+            <sk-trust-summary [trust]="deal.counterparty.trust" />
+          </section>
+
+          <!-- Timeline -->
+          <section class="sk-card sk-card-pad">
+            <h2>State history</h2>
+            <p class="sk-meta timeline__intro">
+              Every transition, who triggered it, and when. This is the audit trail for the deal.
+            </p>
+            <sk-deal-timeline [history]="view.timeline" />
+          </section>
+        </div>
+      </div>
+    }
+  }
+</div>

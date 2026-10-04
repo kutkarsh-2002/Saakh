@@ -1,0 +1,432 @@
+:host {
+  display: block;
+  min-height: 100vh;
+}
+
+.skip-link {
+  position: absolute;
+  left: -9999px;
+  z-index: 100;
+}
+
+.skip-link:focus {
+  left: var(--sk-space-3);
+  top: var(--sk-space-3);
+  padding: var(--sk-space-2) var(--sk-space-3);
+  background: var(--sk-brand);
+  color: var(--sk-ink-inverse);
+  border-radius: var(--sk-radius);
+}
+
+// -----------------------------------------------------------------------------
+// Top bar
+// -----------------------------------------------------------------------------
+
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background: var(--sk-surface);
+  border-bottom: 1px solid var(--sk-line);
+  padding-top: env(safe-area-inset-top, 0px);
+}
+
+.topbar__inner {
+  display: flex;
+  align-items: center;
+  gap: var(--sk-space-3);
+  max-width: var(--sk-content-max);
+  margin: 0 auto;
+  padding: var(--sk-space-2) var(--sk-space-4);
+  min-height: var(--sk-header-height);
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: var(--sk-space-2);
+  color: var(--sk-brand);
+  text-decoration: none;
+  flex: none;
+}
+
+.brand__mark {
+  display: grid;
+  place-items: center;
+}
+
+.brand__text {
+  display: grid;
+  line-height: 1.1;
+}
+
+.brand__name {
+  font-family: var(--sk-font-display);
+  font-size: 1.3125rem;
+  font-weight: 700;
+  letter-spacing: -0.015em;
+  color: var(--sk-ink-strong);
+}
+
+.brand__tag {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--sk-ink-subtle);
+}
+
+// -----------------------------------------------------------------------------
+// Desktop navigation
+// -----------------------------------------------------------------------------
+
+.nav {
+  display: none;
+  align-items: center;
+  gap: 2px;
+  margin-left: var(--sk-space-4);
+}
+
+@media (min-width: 900px) {
+  .nav {
+    display: flex;
+  }
+}
+
+.nav__link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 40px;
+  padding: 0 var(--sk-space-3);
+  border-radius: var(--sk-radius);
+  color: var(--sk-ink-muted);
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.nav__link:hover {
+  background: var(--sk-surface-sunken);
+  color: var(--sk-ink);
+}
+
+.nav__link--active {
+  background: var(--sk-brand-soft);
+  color: var(--sk-brand-soft-ink);
+}
+
+.nav__link--locked {
+  color: var(--sk-ink-subtle);
+  cursor: not-allowed;
+}
+
+.nav__link--locked:hover {
+  background: transparent;
+  color: var(--sk-ink-subtle);
+}
+
+.nav__link .material-symbols-rounded {
+  font-size: 1.25rem;
+}
+
+// -----------------------------------------------------------------------------
+// Icon button and notifications
+// -----------------------------------------------------------------------------
+
+.icon-btn {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: var(--sk-touch);
+  height: var(--sk-touch);
+  border: 0;
+  border-radius: var(--sk-radius);
+  background: transparent;
+  color: var(--sk-ink-muted);
+  cursor: pointer;
+  flex: none;
+}
+
+.icon-btn:hover {
+  background: var(--sk-surface-sunken);
+  color: var(--sk-ink);
+}
+
+.icon-btn .material-symbols-rounded {
+  font-size: 1.375rem;
+}
+
+.icon-btn__badge {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  display: grid;
+  place-items: center;
+  border-radius: var(--sk-radius-pill);
+  background: var(--sk-halted);
+  color: var(--sk-ink-inverse);
+  font-size: 0.625rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+// -----------------------------------------------------------------------------
+// Account
+// -----------------------------------------------------------------------------
+
+.account {
+  display: flex;
+  align-items: center;
+  gap: var(--sk-space-2);
+  min-height: var(--sk-touch);
+  padding: 0 var(--sk-space-2);
+  border: 0;
+  border-radius: var(--sk-radius);
+  background: transparent;
+  cursor: pointer;
+  flex: none;
+  max-width: 13rem;
+}
+
+.account:hover {
+  background: var(--sk-surface-sunken);
+}
+
+.account__avatar {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--sk-brand);
+  color: var(--sk-ink-inverse);
+  font-family: var(--sk-font-display);
+  font-size: 0.9375rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  flex: none;
+}
+
+.account__name {
+  display: none;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--sk-ink);
+}
+
+@media (min-width: 640px) {
+  .account__name {
+    display: block;
+  }
+}
+
+.account__chev {
+  font-size: 1.125rem;
+  color: var(--sk-ink-subtle);
+}
+
+.offline {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin: 0;
+  padding: 5px var(--sk-space-4);
+  background: var(--sk-needs-approval-soft);
+  color: var(--sk-needs-approval-soft-ink);
+  border-top: 1px solid var(--sk-needs-approval);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  text-align: center;
+}
+
+.offline .material-symbols-rounded {
+  font-size: 1rem;
+}
+
+// -----------------------------------------------------------------------------
+// Main
+// -----------------------------------------------------------------------------
+
+.main {
+  // Clears the fixed bottom navigation on a phone.
+  padding-bottom: calc(68px + env(safe-area-inset-bottom, 0px));
+}
+
+@media (min-width: 900px) {
+  .main {
+    padding-bottom: 0;
+  }
+}
+
+// -----------------------------------------------------------------------------
+// Bottom navigation (phones)
+// -----------------------------------------------------------------------------
+
+.bottom-nav {
+  position: fixed;
+  inset: auto 0 0 0;
+  z-index: 20;
+  display: flex;
+  justify-content: space-around;
+  background: var(--sk-surface);
+  border-top: 1px solid var(--sk-line);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  box-shadow: 0 -2px 10px rgb(32 23 15 / 7%);
+}
+
+@media (min-width: 900px) {
+  .bottom-nav {
+    display: none;
+  }
+}
+
+.bottom-nav__link {
+  display: grid;
+  justify-items: center;
+  gap: 1px;
+  flex: 1 1 0;
+  min-height: 60px;
+  padding: var(--sk-space-2) 2px;
+  color: var(--sk-ink-muted);
+  text-decoration: none;
+  font-size: 0.6875rem;
+  font-weight: 600;
+}
+
+.bottom-nav__link .material-symbols-rounded {
+  font-size: 1.375rem;
+}
+
+.bottom-nav__link--active {
+  color: var(--sk-brand);
+}
+
+// The active tab gets a top rule as well as the colour change, so the current
+// tab is identifiable without relying on hue.
+.bottom-nav__link--active::before {
+  content: '';
+  position: absolute;
+  margin-top: -10px;
+  width: 28px;
+  height: 3px;
+  border-radius: var(--sk-radius-pill);
+  background: var(--sk-brand);
+}
+
+.bottom-nav__link--locked {
+  color: var(--sk-ink-subtle);
+}
+
+.bottom-nav__label {
+  text-align: center;
+}
+
+// -----------------------------------------------------------------------------
+// Menu panels
+// -----------------------------------------------------------------------------
+// Menu content is projected into an overlay, but it keeps this component's
+// encapsulation attribute, so these scoped rules still reach it.
+
+.notif__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sk-space-3);
+  padding: var(--sk-space-3) var(--sk-space-3) var(--sk-space-2);
+  border-bottom: 1px solid var(--sk-line-hairline);
+}
+
+.notif__title {
+  margin: 0;
+  font-family: var(--sk-font-display);
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.notif__empty {
+  margin: 0;
+  padding: var(--sk-space-4);
+  max-width: 20rem;
+  font-size: 0.875rem;
+  color: var(--sk-ink-muted);
+}
+
+.notif__list {
+  display: grid;
+  max-height: 24rem;
+  overflow-y: auto;
+}
+
+.notif__item {
+  display: grid;
+  gap: 1px;
+  width: 100%;
+  padding: var(--sk-space-3);
+  border: 0;
+  border-bottom: 1px solid var(--sk-line-hairline);
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+
+.notif__item:hover {
+  background: var(--sk-surface-sunken);
+}
+
+// Unread is marked by a left rule and weight, not only by background tint.
+.notif__item--unread {
+  box-shadow: inset 3px 0 0 0 var(--sk-accent);
+}
+
+.notif__item-title {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--sk-ink-strong);
+}
+
+.notif__item--unread .notif__item-title {
+  font-weight: 700;
+}
+
+.notif__item-body {
+  font-size: 0.8125rem;
+  color: var(--sk-ink-muted);
+}
+
+.notif__item-time {
+  font-size: 0.75rem;
+  color: var(--sk-ink-subtle);
+}
+
+.account-menu {
+  padding: var(--sk-space-3);
+  border-bottom: 1px solid var(--sk-line-hairline);
+  max-width: 17rem;
+}
+
+.account-menu__name {
+  margin: 0;
+  font-weight: 700;
+  font-size: 0.9375rem;
+  color: var(--sk-ink-strong);
+}
+
+.account-menu__email {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--sk-ink-muted);
+  overflow-wrap: anywhere;
+}
+
+.account-menu__status {
+  display: flex;
+  gap: 5px;
+  flex-wrap: wrap;
+  margin-top: var(--sk-space-2);
+}

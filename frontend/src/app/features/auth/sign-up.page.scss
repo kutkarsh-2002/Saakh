@@ -1,0 +1,411 @@
+.steps {
+  list-style: none;
+  display: flex;
+  gap: var(--sk-space-1);
+  margin: 0 0 var(--sk-space-4);
+  padding: 0;
+}
+
+.steps__step {
+  display: flex;
+  align-items: center;
+  gap: var(--sk-space-2);
+  flex: 1 1 0;
+  min-width: 0;
+  padding: var(--sk-space-2);
+  border-radius: var(--sk-radius);
+  background: var(--sk-surface);
+  border: 1px solid var(--sk-line);
+}
+
+.steps__step--current {
+  border-color: var(--sk-brand);
+  background: var(--sk-brand-soft);
+  box-shadow: inset 0 0 0 1px var(--sk-brand);
+}
+
+.steps__step--done {
+  border-color: var(--sk-completed);
+}
+
+.steps__badge {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--sk-surface-sunken);
+  color: var(--sk-ink-muted);
+  font-size: 0.8125rem;
+  font-weight: 700;
+  flex: none;
+}
+
+.steps__step--current .steps__badge {
+  background: var(--sk-brand);
+  color: var(--sk-ink-inverse);
+}
+
+.steps__step--done .steps__badge {
+  background: var(--sk-completed);
+  color: var(--sk-ink-inverse);
+}
+
+.steps__badge .material-symbols-rounded {
+  font-size: 1rem;
+}
+
+.steps__label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--sk-ink-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.steps__step--current .steps__label {
+  color: var(--sk-brand-soft-ink);
+}
+
+@media (max-width: 560px) {
+  // On a narrow screen only the current step keeps its label, so the row never
+  // shrinks the text past readability.
+  .steps__step:not(.steps__step--current) .steps__label {
+    display: none;
+  }
+
+  .steps__step:not(.steps__step--current) {
+    flex: 0 0 auto;
+  }
+}
+
+.alert {
+  display: flex;
+  gap: var(--sk-space-2);
+  margin: 0 0 var(--sk-space-4);
+  padding: var(--sk-space-3);
+  border-radius: var(--sk-radius);
+  background: var(--sk-halted-soft);
+  color: var(--sk-halted-soft-ink);
+  box-shadow: inset 0 0 0 1.5px var(--sk-halted);
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.alert .material-symbols-rounded {
+  font-size: 1.25rem;
+  flex: none;
+}
+
+.panel {
+  display: grid;
+  gap: var(--sk-space-4);
+}
+
+.panel-stack {
+  display: grid;
+  gap: var(--sk-space-4);
+}
+
+.panel__head h2 {
+  display: flex;
+  align-items: center;
+  gap: var(--sk-space-2);
+  flex-wrap: wrap;
+  margin-bottom: 2px;
+}
+
+.optional {
+  padding: 2px 8px;
+  border-radius: var(--sk-radius-pill);
+  background: var(--sk-surface-sunken);
+  color: var(--sk-ink-muted);
+  font-family: var(--sk-font-ui);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+// -----------------------------------------------------------------------------
+// Role picker
+// -----------------------------------------------------------------------------
+
+.roles {
+  border: 0;
+  margin: 0;
+  padding: 0;
+}
+
+.roles__legend {
+  font-family: var(--sk-font-display);
+  font-size: 1.0625rem;
+  font-weight: 600;
+  color: var(--sk-ink-strong);
+  padding: 0;
+}
+
+.roles__hint {
+  margin: 4px 0 var(--sk-space-3);
+  font-size: 0.875rem;
+  color: var(--sk-ink-muted);
+}
+
+.roles__options {
+  display: grid;
+  gap: var(--sk-space-3);
+}
+
+@media (min-width: 620px) {
+  .roles__options {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.role {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: var(--sk-space-3);
+  padding: var(--sk-space-3);
+  border: 1px solid var(--sk-line-strong);
+  border-radius: var(--sk-radius-lg);
+  background: var(--sk-surface);
+  cursor: pointer;
+}
+
+.role:hover {
+  border-color: var(--sk-ink-subtle);
+}
+
+// Selected is marked by a 2px ring and a check glyph, not by colour alone.
+.role--on {
+  border-color: var(--sk-brand);
+  border-width: 2px;
+  padding: calc(var(--sk-space-3) - 1px);
+  background: var(--sk-brand-soft);
+}
+
+.role input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.role:has(input:focus-visible) {
+  outline: 3px solid var(--sk-accent);
+  outline-offset: 2px;
+}
+
+.role__icon {
+  font-size: 1.75rem;
+  color: var(--sk-brand);
+}
+
+.role__body {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.role__name {
+  font-family: var(--sk-font-display);
+  font-size: 1.0625rem;
+  font-weight: 600;
+  color: var(--sk-ink-strong);
+}
+
+.role__desc {
+  font-size: 0.8125rem;
+  color: var(--sk-ink-muted);
+}
+
+.role__sees {
+  margin-top: 2px;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--sk-brand);
+}
+
+.role__check {
+  position: absolute;
+  top: var(--sk-space-2);
+  right: var(--sk-space-2);
+  font-size: 1.25rem;
+  color: var(--sk-brand);
+  font-variation-settings: 'FILL' 1;
+}
+
+// -----------------------------------------------------------------------------
+// Inline input groups
+// -----------------------------------------------------------------------------
+
+.inline {
+  display: flex;
+  align-items: stretch;
+  gap: var(--sk-space-2);
+}
+
+.inline .sk-btn {
+  flex: none;
+}
+
+.inline__prefix {
+  display: grid;
+  place-items: center;
+  padding: 0 var(--sk-space-3);
+  border: 1px solid var(--sk-line-strong);
+  border-radius: var(--sk-radius);
+  background: var(--sk-surface-sunken);
+  color: var(--sk-ink-muted);
+  font-weight: 600;
+  flex: none;
+}
+
+.otp {
+  // Wide tracking on the OTP field so six digits are checkable at a glance.
+  letter-spacing: 0.4em;
+  font-weight: 600;
+  text-align: center;
+}
+
+.gstin {
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-weight: 600;
+}
+
+.ok {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sk-space-2);
+  margin: 0;
+  padding: var(--sk-space-3);
+  border-radius: var(--sk-radius);
+  background: var(--sk-completed-soft);
+  color: var(--sk-completed-soft-ink);
+  box-shadow: inset 0 0 0 1.5px var(--sk-completed);
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.ok .material-symbols-rounded {
+  font-size: 1.25rem;
+  flex: none;
+  font-variation-settings: 'FILL' 1;
+}
+
+.dev-note {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sk-space-2);
+  margin: var(--sk-space-2) 0 0;
+  padding: var(--sk-space-2) var(--sk-space-3);
+  border-radius: var(--sk-radius);
+  background: var(--sk-pending-soft);
+  color: var(--sk-pending-soft-ink);
+  font-size: 0.8125rem;
+}
+
+.dev-note .material-symbols-rounded {
+  font-size: 1.125rem;
+  flex: none;
+}
+
+// -----------------------------------------------------------------------------
+// Verification path notice
+// -----------------------------------------------------------------------------
+
+.path {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sk-space-2);
+  padding: var(--sk-space-3);
+  border-radius: var(--sk-radius);
+  background: var(--sk-completed-soft);
+  color: var(--sk-completed-soft-ink);
+  box-shadow: inset 0 0 0 1.5px var(--sk-completed);
+  font-size: 0.875rem;
+  line-height: 1.55;
+}
+
+.path--review {
+  background: var(--sk-needs-approval-soft);
+  color: var(--sk-needs-approval-soft-ink);
+  box-shadow: inset 0 0 0 1.5px var(--sk-needs-approval);
+}
+
+.path .material-symbols-rounded {
+  font-size: 1.375rem;
+  flex: none;
+}
+
+// -----------------------------------------------------------------------------
+// Capacity and actions
+// -----------------------------------------------------------------------------
+
+.capacity {
+  border: 1px solid var(--sk-line);
+  border-radius: var(--sk-radius);
+  padding: var(--sk-space-3);
+  margin: 0;
+}
+
+.capacity__legend {
+  display: flex;
+  align-items: center;
+  gap: var(--sk-space-2);
+  padding: 0 var(--sk-space-2);
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: var(--sk-ink);
+}
+
+.capacity__unit {
+  font-weight: 500;
+  color: var(--sk-ink-muted);
+}
+
+.capacity .sk-hint {
+  margin: 0 0 var(--sk-space-3);
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.actions--split {
+  justify-content: space-between;
+  gap: var(--sk-space-2);
+}
+
+.actions .sk-btn {
+  flex: 1 1 auto;
+}
+
+@media (min-width: 620px) {
+  .actions .sk-btn {
+    flex: 0 0 auto;
+  }
+}
+
+.switch {
+  margin: 0;
+  text-align: center;
+  font-size: 0.9375rem;
+  color: var(--sk-ink-muted);
+}
+
+.spin {
+  animation: spin 900ms linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

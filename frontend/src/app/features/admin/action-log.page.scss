@@ -1,0 +1,99 @@
+.chips {
+  display: flex;
+  gap: var(--sk-space-2);
+  flex-wrap: wrap;
+}
+
+.log-table {
+  display: none;
+}
+
+.log-cards {
+  list-style: none;
+  margin: 0;
+  padding: var(--sk-space-3) var(--sk-space-4) var(--sk-space-4);
+  display: grid;
+  gap: var(--sk-space-2);
+}
+
+@media (min-width: 980px) {
+  .log-table {
+    display: block;
+  }
+
+  .log-cards {
+    display: none;
+  }
+}
+
+.when {
+  display: block;
+  white-space: nowrap;
+}
+
+.sub {
+  display: block;
+  margin-top: 2px;
+  font-size: 0.6875rem;
+  color: var(--sk-ink-subtle);
+}
+
+// The action pill reuses the status tokens, so an approval here is the same
+// green as a verified badge elsewhere in the product.
+.action {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 9px 2px 6px;
+  border-radius: var(--sk-radius-pill);
+  background: var(--action-bg);
+  color: var(--action-ink);
+  box-shadow: inset 0 0 0 1px var(--action-color);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.action .material-symbols-rounded {
+  font-size: 0.9375rem;
+}
+
+.target {
+  font-weight: 600;
+  color: var(--sk-brand);
+  text-decoration: none;
+}
+
+.target:hover {
+  text-decoration: underline;
+}
+
+.log-card {
+  display: grid;
+  gap: var(--sk-space-1);
+  padding: var(--sk-space-3);
+  background: var(--sk-surface);
+  border: 1px solid var(--sk-line);
+  border-radius: var(--sk-radius);
+}
+
+.log-card__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sk-space-2);
+  flex-wrap: wrap;
+}
+
+.log-card__top .sub {
+  margin: 0;
+}
+
+.log-card__notes {
+  margin: 0;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: var(--sk-ink);
+}

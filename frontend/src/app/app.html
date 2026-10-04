@@ -1,0 +1,217 @@
+@if (session()) {
+  <a class="skip-link" href="#main">Skip to main content</a>
+
+  <header class="topbar">
+    <div class="topbar__inner">
+      <a
+        class="brand"
+        [routerLink]="isAdmin() ? '/admin' : featuresUnlocked() ? '/dashboard' : '/profile'"
+      >
+        <span class="brand__mark" aria-hidden="true">
+          <svg viewBox="0 0 32 32" width="28" height="28">
+            <path
+              d="M16 3.5l11 4.8v7.4c0 6.6-4.4 12.1-11 13.8-6.6-1.7-11-7.2-11-13.8V8.3l11-4.8z"
+              fill="currentColor"
+            />
+            <path
+              d="M10.8 16.2l3.7 3.8 6.7-7.5"
+              fill="none"
+              stroke="var(--sk-surface)"
+              stroke-width="2.6"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
+          </svg>
+        </span>
+        <span class="brand__text">
+          <span class="brand__name">Saakh</span>
+          @if (isAdmin()) {
+            <span class="brand__tag">Admin console</span>
+          } @else if (profile()) {
+            <span class="brand__tag">{{ roleMeta[profile()!.role].label }}</span>
+          }
+        </span>
+      </a>
+
+      @if (isTrader()) {
+        <nav class="nav" aria-label="Main">
+          @for (item of nav(); track item.path) {
+            @if (!item.requiresVerification || featuresUnlocked()) {
+              <a
+                class="nav__link"
+                [routerLink]="item.path"
+                routerLinkActive="nav__link--active"
+                [routerLinkActiveOptions]="{ exact: false }"
+              >
+                <span class="material-symbols-rounded" aria-hidden="true">{{ item.icon }}</span>
+                <span>{{ item.label }}</span>
+              </a>
+            } @else {
+              <!-- A locked tab stays visible but disabled, so the user can see
+                   what verification will unlock rather than wondering where the
+                   rest of the product is. -->
+              <span
+                class="nav__link nav__link--locked"
+                [matTooltip]="'Unlocks once your account is verified'"
+                aria-disabled="true"
+              >
+                <span class="material-symbols-rounded" aria-hidden="true">lock</span>
+                <span>{{ item.label }}</span>
+              </span>
+            }
+          }
+        </nav>
+      } @else if (isAdmin()) {
+        <nav class="nav" aria-label="Main">
+          <a class="nav__link" routerLink="/admin/queue" routerLinkActive="nav__link--active">
+            <span class="material-symbols-rounded" aria-hidden="true">fact_check</span>
+            <span>Queue</span>
+          </a>
+          <a class="nav__link" routerLink="/admin/directory" routerLinkActive="nav__link--active">
+            <span class="material-symbols-rounded" aria-hidden="true">groups</span>
+            <span>Directory</span>
+          </a>
+          <a class="nav__link" routerLink="/admin/activity" routerLinkActive="nav__link--active">
+            <span class="material-symbols-rounded" aria-hidden="true">receipt_long</span>
+            <span>Action log</span>
+          </a>
+        </nav>
+      }
+
+      <span class="sk-spacer"></span>
+
+      @if (isTrader()) {
+        <button
+          type="button"
+          class="icon-btn"
+          [matMenuTriggerFor]="notificationMenu"
+          [attr.aria-label]="
+            unreadCount() > 0 ? unreadCount() + ' unread notifications' : 'Notifications'
+          "
+        >
+          <span class="material-symbols-rounded" aria-hidden="true">notifications</span>
+          @if (unreadCount() > 0) {
+            <span class="icon-btn__badge sk-figure">{{ unreadCount() > 9 ? '9+' : unreadCount() }}</span>
+          }
+        </button>
+
+        <mat-menu #notificationMenu="matMenu" class="notif-menu">
+          <div class="notif__head">
+            <p class="notif__title">Notifications</p>
+            @if (unreadCount() > 0) {
+              <button type="button" class="sk-btn sk-btn--quiet sk-btn--sm" (click)="markAllRead()">
+                Mark all read
+              </button>
+            }
+          </div>
+
+          @if (notifications().length === 0) {
+            <p class="notif__empty">Nothing yet. Interest requests and deal updates land here.</p>
+          } @else {
+            <div class="notif__list">
+              @for (item of notifications().slice(0, 12); track item.id) {
+                <button
+                  type="button"
+                  class="notif__item"
+                  [class.notif__item--unread]="!item.isRead"
+                  (click)="openNotification(item)"
+                >
+                  <span class="notif__item-title">{{ item.title }}</span>
+                  <span class="notif__item-body">{{ item.body }}</span>
+                  <span class="notif__item-time">{{ formatRelative(item.createdAt) }}</span>
+                </button>
+              }
+            </div>
+          }
+        </mat-menu>
+      }
+
+      <button
+        type="button"
+        class="account"
+        [matMenuTriggerFor]="accountMenu"
+        aria-label="Account menu"
+      >
+        <span class="account__avatar" aria-hidden="true">{{ displayName().charAt(0) }}</span>
+        <span class="account__name sk-truncate">{{ displayName() }}</span>
+        <span class="material-symbols-rounded account__chev" aria-hidden="true">expand_more</span>
+      </button>
+
+      <mat-menu #accountMenu="matMenu">
+        <div class="account-menu">
+          <p class="account-menu__name">{{ displayName() }}</p>
+          <p class="account-menu__email">{{ session()!.email }}</p>
+
+          @if (profile()) {
+            <div class="account-menu__status">
+              <sk-status-pill [verification]="profile()!.verificationStatus" />
+              <sk-status-pill [availability]="profile()!.availabilityStatus" />
+            </div>
+          }
+        </div>
+
+        @if (isTrader()) {
+          <a mat-menu-item routerLink="/profile">
+            <span class="material-symbols-rounded" aria-hidden="true">person</span>
+            <span>Profile &amp; verification</span>
+          </a>
+
+          @if (canToggleAvailability()) {
+            <button mat-menu-item type="button" (click)="toggleAvailability()">
+              <span class="material-symbols-rounded" aria-hidden="true">
+                {{ availabilityLabel() === 'Active' ? 'pause_circle' : 'play_circle' }}
+              </span>
+              <span>
+                {{ availabilityLabel() === 'Active' ? 'Go inactive' : 'Go active' }}
+              </span>
+            </button>
+          }
+        }
+
+        <button mat-menu-item type="button" (click)="signOut()">
+          <span class="material-symbols-rounded" aria-hidden="true">logout</span>
+          <span>Sign out</span>
+        </button>
+      </mat-menu>
+    </div>
+
+    @if (!realtimeConnected()) {
+      <!-- Stated plainly rather than silently degrading: this user base is on
+           patchy mobile data and needs to know the live feed is not arriving. -->
+      <p class="offline" role="status">
+        <span class="material-symbols-rounded" aria-hidden="true">cloud_off</span>
+        Live updates are reconnecting. Pull to refresh to see the latest.
+      </p>
+    }
+  </header>
+
+  <main id="main" class="main">
+    <router-outlet />
+  </main>
+
+  @if (isTrader()) {
+    <!-- Mobile-first: on a phone the navigation sits where a thumb reaches it. -->
+    <nav class="bottom-nav" aria-label="Main">
+      @for (item of nav(); track item.path) {
+        @if (!item.requiresVerification || featuresUnlocked()) {
+          <a
+            class="bottom-nav__link"
+            [routerLink]="item.path"
+            routerLinkActive="bottom-nav__link--active"
+          >
+            <span class="material-symbols-rounded" aria-hidden="true">{{ item.icon }}</span>
+            <span class="bottom-nav__label">{{ item.label }}</span>
+          </a>
+        } @else {
+          <span class="bottom-nav__link bottom-nav__link--locked" aria-disabled="true">
+            <span class="material-symbols-rounded" aria-hidden="true">lock</span>
+            <span class="bottom-nav__label">{{ item.label }}</span>
+          </span>
+        }
+      }
+    </nav>
+  }
+} @else {
+  <!-- Signed out: the auth screens draw their own full-page layout. -->
+  <router-outlet />
+}

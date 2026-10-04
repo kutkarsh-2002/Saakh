@@ -1,0 +1,199 @@
+.crumbs {
+  margin-bottom: var(--sk-space-3);
+}
+
+.crumbs a {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 36px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.crumbs a:hover {
+  text-decoration: underline;
+}
+
+.crumbs .material-symbols-rounded {
+  font-size: 1.125rem;
+}
+
+.layout {
+  display: grid;
+  gap: var(--sk-space-4);
+}
+
+@media (min-width: 1000px) {
+  .layout {
+    // Chat gets the wider column: it is what the user came here to do.
+    grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+    align-items: start;
+  }
+}
+
+// -----------------------------------------------------------------------------
+// Chat panel
+// -----------------------------------------------------------------------------
+
+.chat {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-width: 0;
+}
+
+.chat__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sk-space-3);
+  padding: var(--sk-space-4);
+  border-bottom: 1px solid var(--sk-line);
+  flex-wrap: wrap;
+}
+
+.chat__who h1 {
+  margin: 0;
+  font-size: 1.375rem;
+}
+
+.chat__sub {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin: 2px 0 0;
+  flex-wrap: wrap;
+}
+
+.gate {
+  display: flex;
+  align-items: center;
+  gap: var(--sk-space-3);
+  margin: 0;
+  padding: var(--sk-space-4);
+  background: var(--sk-pending-soft);
+  color: var(--sk-pending-soft-ink);
+  border-bottom: 1px solid var(--sk-line);
+  font-size: 0.875rem;
+  line-height: 1.55;
+  flex-wrap: wrap;
+}
+
+// An inbound interest awaiting an answer is an action, so it gets the warmer
+// accent and the button sits in the same block.
+.gate--action {
+  background: var(--sk-accent-soft);
+  color: var(--sk-accent-soft-ink);
+}
+
+.gate .material-symbols-rounded {
+  font-size: 1.5rem;
+  flex: none;
+}
+
+.gate > span:nth-child(2) {
+  flex: 1 1 14rem;
+}
+
+.gate .sk-btn {
+  flex: 0 0 auto;
+}
+
+// -----------------------------------------------------------------------------
+// Side column
+// -----------------------------------------------------------------------------
+
+.side {
+  display: grid;
+  gap: var(--sk-space-4);
+  align-content: start;
+  min-width: 0;
+}
+
+.next h2,
+.done h2 {
+  margin: 2px 0 var(--sk-space-2);
+}
+
+.next .sk-meta,
+.done .sk-meta {
+  margin: 0 0 var(--sk-space-3);
+}
+
+.next__note {
+  margin: var(--sk-space-3) 0 0;
+  font-size: 0.75rem;
+  color: var(--sk-ink-subtle);
+  line-height: 1.5;
+}
+
+.done {
+  display: grid;
+  justify-items: start;
+  background: var(--sk-completed-soft);
+  border-color: var(--sk-completed);
+}
+
+.done__icon {
+  font-size: 1.75rem;
+  color: var(--sk-completed);
+  font-variation-settings: 'FILL' 1;
+}
+
+.party__head {
+  display: flex;
+  align-items: center;
+  gap: var(--sk-space-2);
+  flex-wrap: wrap;
+  margin-bottom: var(--sk-space-3);
+}
+
+.party__name {
+  font-family: var(--sk-font-display);
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--sk-ink-strong);
+  text-decoration: none;
+}
+
+.party__name:hover {
+  text-decoration: underline;
+}
+
+.party__facts {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--sk-space-3);
+  margin: 0;
+}
+
+.party__facts-wide {
+  grid-column: 1 / -1;
+}
+
+.party__facts dt {
+  font-size: 0.625rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--sk-ink-subtle);
+}
+
+.party__facts dd {
+  margin: 0;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--sk-ink);
+}
+
+.note {
+  margin: var(--sk-space-2) 0;
+  padding: var(--sk-space-3);
+  background: var(--sk-surface-sunken);
+  border-radius: var(--sk-radius);
+  box-shadow: inset 3px 0 0 0 var(--sk-accent);
+  font-size: 0.9375rem;
+  line-height: 1.55;
+}

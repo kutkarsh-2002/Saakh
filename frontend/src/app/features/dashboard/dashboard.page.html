@@ -1,0 +1,521 @@
+<div class="sk-page">
+  <sk-page-header
+    [eyebrow]="'Opportunity'"
+    [title]="'Good to see you, ' + (profile()?.name ?? '')"
+    [subtitle]="
+      'Browse ' +
+      counterpartyLabel() +
+      ' you have not worked with yet, and keep an eye on the deals already in flight.'
+    "
+  >
+    <a class="sk-btn sk-btn--secondary" routerLink="/interests">
+      <span class="material-symbols-rounded" aria-hidden="true">handshake</span>
+      Interests
+    </a>
+    <a class="sk-btn sk-btn--secondary" routerLink="/history">
+      <span class="material-symbols-rounded" aria-hidden="true">history</span>
+      History
+    </a>
+  </sk-page-header>
+
+  <!-- ===== Your own trust record ======================================== -->
+  @if (profile(); as me) {
+    <section class="sk-card sk-card-pad standing">
+      <div class="standing__trust">
+        <sk-trust-summary [trust]="me.trust" [showCounts]="false" />
+      </div>
+
+      <div class="standing__tiles sk-grid-auto">
+        <sk-stat-tile
+          label="Deals in flight"
+          [value]="openDeals().length"
+          icon="pending_actions"
+          tone="open"
+          [hint]="settlementSoon() > 0 ? settlementSoon() + ' settling within a week' : 'Nothing due this week'"
+        />
+        <sk-stat-tile
+          label="Settled clean"
+          [value]="me.trust.completedDeals"
+          icon="task_alt"
+          tone="completed"
+          hint="Your strongest signal to a new partner"
+        />
+        <sk-stat-tile
+          label="Halted"
+          [value]="me.trust.haltedDeals"
+          icon="flag"
+          tone="halted"
+          [hint]="
+            me.trust.haltsAtFault > 0
+              ? me.trust.haltsAtFault + ' recorded at your fault'
+              : 'None at your fault'
+          "
+        />
+        <sk-stat-tile
+          label="Candidates matching"
+          [value]="formatNumber(totalOpportunities())"
+          icon="groups"
+          tone="brand"
+          [hint]="activeFilterCount() > 0 ? 'With your filters applied' : 'Ranked for you'"
+        />
+      </div>
+    </section>
+  }
+
+  <!-- ===== 1. The two analytics graphs ================================== -->
+  @if (analytics(); as data) {
+    <sk-analytics-charts [analytics]="data" class="block" />
+  } @else {
+    <div class="sk-card block"><sk-loading [count]="5" label="Loading your analytics" /></div>
+  }
+
+  <!-- ===== 2. Filter bar ================================================ -->
+  <section class="sk-card filters block">
+    <div class="filters__bar">
+      <div class="filters__search sk-field">
+        <label for="search" class="sk-sr-only">Search by name or place</label>
+        <span class="material-symbols-rounded filters__search-icon" aria-hidden="true">search</span>
+        <input
+          id="search"
+          type="search"
+          class="sk-input"
+          [value]="search()"
+          (input)="search.set($any($event.target).value); page.set(1)"
+          [attr.placeholder]="'Search ' + counterpartyLabel() + ' by name or place'"
+        />
+      </div>
+
+      <div class="sk-field filters__sort">
+        <label for="sortBy" class="sk-sr-only">Sort by</label>
+        <select
+          id="sortBy"
+          class="sk-select"
+          [value]="sortBy()"
+          (change)="sortBy.set($any($event.target).value); page.set(1)"
+        >
+          <option value="match">Best match</option>
+          <option value="rating">Highest rated</option>
+          <option value="capacity">Largest capacity</option>
+          <option value="newest">Newest</option>
+        </select>
+      </div>
+
+      <button
+        type="button"
+        class="sk-btn sk-btn--secondary filters__toggle"
+        [attr.aria-expanded]="filtersOpen()"
+        (click)="filtersOpen.set(!filtersOpen())"
+      >
+        <span class="material-symbols-rounded" aria-hidden="true">tune</span>
+        Filters
+        @if (activeFilterCount() > 0) {
+          <span class="filters__count sk-figure">{{ activeFilterCount() }}</span>
+        }
+      </button>
+    </div>
+
+    @if (filtersOpen()) {
+      <div class="filters__panel">
+        <!-- Location: state, then district, both multi-select. -->
+        <fieldset class="group">
+          <legend class="sk-eyebrow">State</legend>
+          <div class="group__chips">
+            @for (location of locations(); track location.state) {
+              <sk-filter-chip
+                [label]="location.state"
+                [selected]="selectedStates().includes(location.state)"
+                (toggled)="toggleState(location.state)"
+              />
+            }
+          </div>
+        </fieldset>
+
+        @if (districtOptions().length > 0) {
+          <fieldset class="group">
+            <legend class="sk-eyebrow">District</legend>
+            <div class="group__chips">
+              @for (district of districtOptions(); track district) {
+                <sk-filter-chip
+                  [label]="district"
+                  [selected]="selectedDistricts().includes(district)"
+                  (toggled)="toggleDistrict(district)"
+                />
+              }
+            </div>
+          </fieldset>
+        }
+
+        <fieldset class="group">
+          <legend class="sk-eyebrow">Category</legend>
+          <div class="group__chips">
+            @for (category of [DealCategory.Money, DealCategory.RawMaterial]; track category) {
+              <sk-filter-chip
+                [label]="categoryMeta[category].label"
+                [icon]="categoryMeta[category].icon"
+                [selected]="selectedCategories().includes(category)"
+                (toggled)="toggleCategory(category)"
+              />
+            }
+          </div>
+        </fieldset>
+
+        <fieldset class="group">
+          <legend class="sk-eyebrow">Type</legend>
+          <div class="group__chips">
+            @for (subType of subTypeOptions(); track subType.id) {
+              <sk-filter-chip
+                [label]="subType.displayName"
+                [selected]="selectedSubTypes().includes(subType.id)"
+                (toggled)="toggleSubType(subType.id)"
+              />
+            }
+          </div>
+        </fieldset>
+
+        <fieldset class="group">
+          <legend class="sk-eyebrow">Minimum rating</legend>
+          <div class="group__chips">
+            @for (threshold of [3, 3.5, 4, 4.5]; track threshold) {
+              <sk-filter-chip
+                [label]="threshold + ' stars and up'"
+                icon="star"
+                [selected]="minRating() === threshold"
+                (toggled)="setMinRating(threshold)"
+              />
+            }
+          </div>
+          <p class="group__hint">
+            A minimum rating also hides anyone with no ratings yet, including new vendors who have
+            not had a chance to settle a deal.
+          </p>
+        </fieldset>
+
+        <fieldset class="group">
+          <legend class="sk-eyebrow">Capacity range</legend>
+          <div class="group__range">
+            <div class="sk-field">
+              <label for="capMin">From</label>
+              <input
+                id="capMin"
+                #capMin
+                type="number"
+                class="sk-input"
+                min="0"
+                [value]="capacityMin() ?? ''"
+                placeholder="Any"
+              />
+            </div>
+            <div class="sk-field">
+              <label for="capMax">Up to</label>
+              <input
+                id="capMax"
+                #capMax
+                type="number"
+                class="sk-input"
+                min="0"
+                [value]="capacityMax() ?? ''"
+                placeholder="Any"
+              />
+            </div>
+            <button
+              type="button"
+              class="sk-btn sk-btn--secondary"
+              (click)="applyCapacity(capMin.value, capMax.value)"
+            >
+              Apply
+            </button>
+          </div>
+          <p class="group__hint">
+            Matches anyone whose declared range overlaps yours, not only those whose range contains
+            it exactly.
+          </p>
+        </fieldset>
+
+        @if (activeFilterCount() > 0) {
+          <button type="button" class="sk-btn sk-btn--quiet" (click)="clearFilters()">
+            <span class="material-symbols-rounded" aria-hidden="true">filter_alt_off</span>
+            Clear all {{ activeFilterCount() }} filters
+          </button>
+        }
+      </div>
+    }
+  </section>
+
+  <!-- ===== 3. Opportunity table ========================================= -->
+  <section class="sk-card block">
+    <div class="sk-card-head">
+      <div>
+        <h2>{{ roleMeta[profile()!.role].discovers }} to consider</h2>
+        <p class="sk-meta">
+          @if (activeFilterCount() > 0) {
+            {{ formatNumber(totalOpportunities()) }} matching your filters.
+          } @else {
+            Ranked by a blend of how close they are, whether they deal in the same thing, and their
+            settled history.
+          }
+        </p>
+      </div>
+      <span class="sk-spacer"></span>
+      @if (totalPages() > 1) {
+        <div class="pager">
+          <button
+            type="button"
+            class="sk-btn sk-btn--secondary sk-btn--sm"
+            [disabled]="page() === 1"
+            (click)="changePage(-1)"
+          >
+            <span class="material-symbols-rounded" aria-hidden="true">chevron_left</span>
+            <span class="sk-sr-only">Previous page</span>
+          </button>
+          <span class="pager__label sk-figure">{{ page() }} / {{ totalPages() }}</span>
+          <button
+            type="button"
+            class="sk-btn sk-btn--secondary sk-btn--sm"
+            [disabled]="page() === totalPages()"
+            (click)="changePage(1)"
+          >
+            <span class="material-symbols-rounded" aria-hidden="true">chevron_right</span>
+            <span class="sk-sr-only">Next page</span>
+          </button>
+        </div>
+      }
+    </div>
+
+    @if (loadingOpportunities()) {
+      <sk-loading [count]="5" label="Finding candidates" />
+    } @else if (opportunities().length === 0) {
+      <sk-empty-state
+        icon="search_off"
+        title="Nobody matches those filters"
+        [message]="
+          activeFilterCount() > 0
+            ? 'Try widening the location or clearing the minimum rating — a new vendor with no ratings yet is still excluded by that one.'
+            : 'There are no active ' + counterpartyLabel() + ' to show yet. Seeded demo data populates this list.'
+        "
+      >
+        @if (activeFilterCount() > 0) {
+          <button type="button" class="sk-btn sk-btn--primary" (click)="clearFilters()">
+            Clear filters
+          </button>
+        }
+      </sk-empty-state>
+    } @else {
+      <!-- Wide: table. Narrow: cards. -->
+      <div class="sk-table-wrap opp-table">
+        <table class="sk-table">
+          <caption class="sk-sr-only">Candidate profiles matching your filters</caption>
+          <thead>
+            <tr>
+              <th scope="col">Profile</th>
+              <th scope="col">Deals in</th>
+              <th scope="col" class="sk-num">Capacity</th>
+              <th scope="col">Location</th>
+              <th scope="col">Trust record</th>
+              <th scope="col">Match</th>
+              <th scope="col"><span class="sk-sr-only">Actions</span></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (row of opportunities(); track row.profile.id) {
+              <tr>
+                <td>
+                  <a class="cand" [routerLink]="['/counterparties', row.profile.id]">
+                    <span class="cand__name">{{ row.profile.name }}</span>
+                    <span class="cand__badges">
+                      <sk-verification-badge
+                        [verified]="row.profile.gstinVerified"
+                        [legalName]="row.profile.gstinLegalName"
+                        [gstin]="row.profile.gstinMasked"
+                        [showUnverified]="!row.profile.gstinVerified"
+                        size="sm"
+                      />
+                    </span>
+                  </a>
+                </td>
+
+                <td>
+                  <span class="cat">
+                    <span class="material-symbols-rounded" aria-hidden="true">{{
+                      categoryMeta[row.profile.category].icon
+                    }}</span>
+                    {{ row.profile.subType?.displayName ?? categoryMeta[row.profile.category].label }}
+                  </span>
+                </td>
+
+                <td class="sk-num">{{ capacityLabel(row) }}</td>
+
+                <td>
+                  <span class="loc">{{ row.profile.district }}</span>
+                  <span class="loc loc--sub">{{ row.profile.state }}</span>
+                </td>
+
+                <td>
+                  <sk-trust-summary [trust]="row.profile.trust" [compact]="true" />
+                </td>
+
+                <td>
+                  <span
+                    class="match"
+                    [matTooltip]="
+                      'Ranking score: how close they are, whether they deal in the same thing, and their settled history.'
+                    "
+                  >
+                    <span class="match__bar">
+                      <span
+                        class="match__fill"
+                        [style.width.%]="(row.matchScore / 100) * 100"
+                      ></span>
+                    </span>
+                    <span class="match__value sk-figure">{{ row.matchScore }}</span>
+                  </span>
+                </td>
+
+                <td>
+                  <div class="row-actions">
+                    @if (row.hasActiveDeal) {
+                      <span class="note">
+                        <span class="material-symbols-rounded" aria-hidden="true">link</span>
+                        Deal in flight
+                      </span>
+                    }
+
+                    @if (row.interestStatus === null) {
+                      <button
+                        type="button"
+                        class="sk-btn sk-btn--primary sk-btn--sm"
+                        (click)="sendInterest(row)"
+                      >
+                        Send interest
+                      </button>
+                    } @else {
+                      <sk-status-pill [interest]="row.interestStatus" />
+                      @if (row.interestStatus === 2) {
+                        <button
+                          type="button"
+                          class="sk-btn sk-btn--secondary sk-btn--sm"
+                          (click)="openInterest(row)"
+                        >
+                          Open chat
+                        </button>
+                      } @else if (row.interestStatus === 3) {
+                        <button
+                          type="button"
+                          class="sk-btn sk-btn--quiet sk-btn--sm"
+                          (click)="sendInterest(row)"
+                        >
+                          Try again
+                        </button>
+                      }
+                    }
+                  </div>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+
+      <ul class="opp-cards">
+        @for (row of opportunities(); track row.profile.id) {
+          <li class="opp-card">
+            <a class="opp-card__head" [routerLink]="['/counterparties', row.profile.id]">
+              <span class="opp-card__name">{{ row.profile.name }}</span>
+              <sk-verification-badge
+                [verified]="row.profile.gstinVerified"
+                [legalName]="row.profile.gstinLegalName"
+                [gstin]="row.profile.gstinMasked"
+                [showUnverified]="!row.profile.gstinVerified"
+                size="sm"
+              />
+            </a>
+
+            <sk-trust-summary [trust]="row.profile.trust" [compact]="true" />
+
+            <dl class="opp-card__facts">
+              <div>
+                <dt>Deals in</dt>
+                <dd>
+                  {{ row.profile.subType?.displayName ?? categoryMeta[row.profile.category].label }}
+                </dd>
+              </div>
+              <div>
+                <dt>Capacity</dt>
+                <dd class="sk-figure">{{ capacityLabel(row) }}</dd>
+              </div>
+              <div>
+                <dt>Based in</dt>
+                <dd>{{ row.profile.district }}, {{ row.profile.state }}</dd>
+              </div>
+              <div>
+                <dt>Match score</dt>
+                <dd class="sk-figure">{{ row.matchScore }}</dd>
+              </div>
+            </dl>
+
+            <div class="opp-card__actions">
+              @if (row.interestStatus === null) {
+                <button
+                  type="button"
+                  class="sk-btn sk-btn--primary sk-btn--sm"
+                  (click)="sendInterest(row)"
+                >
+                  <span class="material-symbols-rounded" aria-hidden="true">send</span>
+                  Send interest
+                </button>
+              } @else {
+                <sk-status-pill [interest]="row.interestStatus" />
+                @if (row.interestStatus === 2) {
+                  <button
+                    type="button"
+                    class="sk-btn sk-btn--secondary sk-btn--sm"
+                    (click)="openInterest(row)"
+                  >
+                    Open chat
+                  </button>
+                }
+              }
+            </div>
+          </li>
+        }
+      </ul>
+    }
+  </section>
+
+  <!-- ===== Open Deals table (separate from discovery) =================== -->
+  <section class="sk-card block">
+    <div class="sk-card-head">
+      <div>
+        <h2>Your open deals</h2>
+        <p class="sk-meta">
+          Everything in Open or Progress. There is no cap on how many you hold at once across
+          different counterparties.
+        </p>
+      </div>
+      <span class="sk-spacer"></span>
+      <a class="sk-btn sk-btn--secondary sk-btn--sm" routerLink="/deals">
+        Full deal view
+        <span class="material-symbols-rounded" aria-hidden="true">arrow_forward</span>
+      </a>
+    </div>
+
+    @if (loadingDeals()) {
+      <sk-loading [count]="3" label="Loading your deals" />
+    } @else if (openDeals().length === 0) {
+      <sk-empty-state
+        icon="receipt_long"
+        title="No deals in flight"
+        message="Send interest to someone above. Once they accept and you both agree terms, raising a ticket creates the deal and it appears here."
+      />
+    } @else {
+      <div class="deals-pad">
+        <sk-deal-table
+          [rows]="openDeals()"
+          caption="Your open deals"
+          (rate)="rateDeal($event)"
+          (resume)="requestResume($event)"
+          (acceptResume)="acceptResume($event)"
+        />
+      </div>
+    }
+  </section>
+</div>

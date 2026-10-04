@@ -1,0 +1,163 @@
+<div class="sk-page">
+  <nav class="crumbs" aria-label="Breadcrumb">
+    <a routerLink="/interests">
+      <span class="material-symbols-rounded" aria-hidden="true">arrow_back</span>
+      All interests
+    </a>
+  </nav>
+
+  @if (loading()) {
+    <div class="sk-card"><sk-loading [count]="6" label="Loading the conversation" /></div>
+  } @else if (interest(); as item) {
+    <div class="layout">
+      <!-- ===== Chat ======================================================= -->
+      <section class="sk-card chat">
+        <header class="chat__head">
+          <div class="chat__who">
+            <h1>{{ item.counterparty.name }}</h1>
+            <p class="chat__sub sk-meta">
+              {{ roleMeta[item.counterparty.role].label }}
+              <span aria-hidden="true">·</span>
+              {{ item.counterparty.district }}, {{ item.counterparty.state }}
+            </p>
+          </div>
+          <sk-status-pill [interest]="item.status" size="lg" />
+        </header>
+
+        @if (item.status === InterestStatus.Sent) {
+          @if (item.sentByMe) {
+            <p class="gate">
+              <span class="material-symbols-rounded" aria-hidden="true">hourglass_top</span>
+              <span>
+                <strong>Waiting on {{ item.counterparty.name }}.</strong>
+                Chat opens as soon as they accept your interest. You will be notified here.
+              </span>
+            </p>
+          } @else {
+            <div class="gate gate--action">
+              <span class="material-symbols-rounded" aria-hidden="true">waving_hand</span>
+              <span>
+                <strong>{{ item.counterparty.name }} wants to work with you.</strong>
+                Accept to open the chat and start negotiating terms.
+              </span>
+              <button type="button" class="sk-btn sk-btn--primary" (click)="accept()">
+                Accept &amp; open chat
+              </button>
+            </div>
+          }
+        } @else if (item.status === InterestStatus.Declined) {
+          <p class="gate">
+            <span class="material-symbols-rounded" aria-hidden="true">do_not_disturb_on</span>
+            <span>
+              This interest was declined. No deal was created and nothing was recorded against
+              either profile.
+            </span>
+          </p>
+        }
+
+        <sk-chat-thread
+          [messages]="messages()"
+          [canSend]="item.chatUnlocked"
+          [sending]="sending()"
+          [placeholder]="'Message ' + item.counterparty.name"
+          lockedMessage="Chat opens once this interest is accepted."
+          emptyTitle="Start the conversation"
+          emptyMessage="Say what you need, how much, and roughly when. Agreeing the specifics here makes raising the ticket a formality."
+          (sent)="send($event)"
+        />
+      </section>
+
+      <!-- ===== Side: trust + next step ==================================== -->
+      <aside class="side">
+        @if (item.dealId) {
+          <section class="sk-card sk-card-pad done">
+            <span class="material-symbols-rounded done__icon" aria-hidden="true">task_alt</span>
+            <h2>A ticket already exists</h2>
+            <p class="sk-meta">
+              This conversation produced a deal. The chat continues inside the deal workspace, next
+              to the terms and the state timeline.
+            </p>
+            <a class="sk-btn sk-btn--primary sk-btn--block" [routerLink]="['/deals', item.dealId]">
+              <span class="material-symbols-rounded" aria-hidden="true">receipt_long</span>
+              Open the deal
+            </a>
+          </section>
+        } @else if (item.chatUnlocked) {
+          <section class="sk-card sk-card-pad next">
+            <p class="sk-eyebrow">Next step</p>
+            <h2>Agreed the terms?</h2>
+            <p class="sk-meta">
+              Raising a ticket turns what you agreed into a tracked deal, in
+              <strong>Open</strong> state and visible to you both. Either of you can raise it.
+            </p>
+            <button
+              type="button"
+              class="sk-btn sk-btn--primary sk-btn--block"
+              (click)="raiseTicket()"
+            >
+              <span class="material-symbols-rounded" aria-hidden="true">post_add</span>
+              Raise a ticket
+            </button>
+            <p class="next__note">
+              Nothing is tracked until a ticket exists, so a deal struck only in chat leaves no
+              trust record for either of you.
+            </p>
+          </section>
+        }
+
+        <section class="sk-card sk-card-pad">
+          <div class="party">
+            <div class="party__head">
+              <a class="party__name" [routerLink]="['/counterparties', item.counterparty.id]">
+                {{ item.counterparty.name }}
+              </a>
+              <sk-verification-badge
+                [verified]="item.counterparty.gstinVerified"
+                [legalName]="item.counterparty.gstinLegalName"
+                [gstin]="item.counterparty.gstinMasked"
+                [showUnverified]="!item.counterparty.gstinVerified"
+                size="sm"
+              />
+            </div>
+
+            <dl class="party__facts">
+              <div>
+                <dt>Deals in</dt>
+                <dd>
+                  {{
+                    item.counterparty.subType?.displayName ??
+                      categoryMeta[item.counterparty.category].label
+                  }}
+                </dd>
+              </div>
+              <div>
+                <dt>Capacity</dt>
+                <dd class="sk-figure">{{ capacityLabel() }}</dd>
+              </div>
+              @if (item.counterparty.ownTradeDescription) {
+                <div class="party__facts-wide">
+                  <dt>Own trade</dt>
+                  <dd>{{ item.counterparty.ownTradeDescription }}</dd>
+                </div>
+              }
+            </dl>
+          </div>
+
+          <hr class="sk-divider" />
+
+          <sk-trust-summary [trust]="item.counterparty.trust" />
+        </section>
+
+        @if (item.note) {
+          <section class="sk-card sk-card-pad">
+            <p class="sk-eyebrow">
+              {{ item.sentByMe ? 'The note you sent' : 'Their opening note' }}
+            </p>
+            <blockquote class="note">{{ item.note }}</blockquote>
+            <p class="sk-meta">{{ formatRelative(item.createdAt) }}</p>
+          </section>
+        }
+      </aside>
+    </div>
+  }
+</div>

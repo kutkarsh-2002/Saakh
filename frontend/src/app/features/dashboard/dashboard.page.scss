@@ -1,0 +1,331 @@
+.block {
+  margin-top: var(--sk-space-5);
+}
+
+// -----------------------------------------------------------------------------
+// Your own standing
+// -----------------------------------------------------------------------------
+
+.standing {
+  display: grid;
+  gap: var(--sk-space-5);
+}
+
+@media (min-width: 1100px) {
+  .standing {
+    // The trust record gets the narrower column: it is a summary, and the tiles
+    // carry the numbers a user scans first.
+    grid-template-columns: minmax(0, 20rem) minmax(0, 1fr);
+    align-items: start;
+  }
+}
+
+.standing__trust {
+  padding-bottom: var(--sk-space-4);
+  border-bottom: 1px solid var(--sk-line-hairline);
+}
+
+@media (min-width: 1100px) {
+  .standing__trust {
+    padding-bottom: 0;
+    padding-right: var(--sk-space-5);
+    border-bottom: 0;
+    border-right: 1px solid var(--sk-line-hairline);
+  }
+}
+
+// -----------------------------------------------------------------------------
+// Filter bar
+// -----------------------------------------------------------------------------
+
+.filters__bar {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--sk-space-2);
+  padding: var(--sk-space-3) var(--sk-space-4);
+  flex-wrap: wrap;
+}
+
+.filters__search {
+  position: relative;
+  flex: 1 1 16rem;
+  min-width: 0;
+}
+
+.filters__search .sk-input {
+  padding-left: 40px;
+}
+
+.filters__search-icon {
+  position: absolute;
+  left: 11px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 1.25rem;
+  color: var(--sk-ink-subtle);
+  pointer-events: none;
+}
+
+.filters__sort {
+  flex: 0 1 11rem;
+}
+
+.filters__toggle {
+  flex: none;
+}
+
+.filters__count {
+  display: grid;
+  place-items: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 5px;
+  border-radius: var(--sk-radius-pill);
+  background: var(--sk-brand);
+  color: var(--sk-ink-inverse);
+  font-size: 0.6875rem;
+  font-weight: 700;
+}
+
+.filters__panel {
+  display: grid;
+  gap: var(--sk-space-4);
+  padding: var(--sk-space-4);
+  border-top: 1px solid var(--sk-line-hairline);
+  background: var(--sk-surface-sunken);
+  border-radius: 0 0 var(--sk-radius-lg) var(--sk-radius-lg);
+}
+
+.group {
+  border: 0;
+  margin: 0;
+  padding: 0;
+}
+
+.group legend {
+  padding: 0 0 var(--sk-space-2);
+}
+
+.group__chips {
+  display: flex;
+  gap: var(--sk-space-2);
+  flex-wrap: wrap;
+}
+
+.group__hint {
+  margin: var(--sk-space-2) 0 0;
+  font-size: 0.75rem;
+  color: var(--sk-ink-muted);
+  max-width: 56ch;
+}
+
+.group__range {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--sk-space-2);
+  flex-wrap: wrap;
+}
+
+.group__range .sk-field {
+  flex: 1 1 8rem;
+}
+
+// -----------------------------------------------------------------------------
+// Opportunity table / cards
+// -----------------------------------------------------------------------------
+
+.opp-table {
+  display: none;
+}
+
+.opp-cards {
+  list-style: none;
+  margin: 0;
+  padding: var(--sk-space-3) var(--sk-space-4) var(--sk-space-4);
+  display: grid;
+  gap: var(--sk-space-3);
+}
+
+@media (min-width: 1100px) {
+  .opp-table {
+    display: block;
+  }
+
+  .opp-cards {
+    display: none;
+  }
+}
+
+.cand {
+  display: grid;
+  gap: 3px;
+  max-width: 15rem;
+  text-decoration: none;
+  color: inherit;
+}
+
+.cand__name {
+  font-family: var(--sk-font-display);
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--sk-ink-strong);
+}
+
+.cand:hover .cand__name {
+  text-decoration: underline;
+}
+
+.cat {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  white-space: nowrap;
+}
+
+.cat .material-symbols-rounded {
+  font-size: 1.0625rem;
+  color: var(--sk-ink-muted);
+}
+
+.loc {
+  display: block;
+  white-space: nowrap;
+}
+
+.loc--sub {
+  font-size: 0.75rem;
+  color: var(--sk-ink-muted);
+}
+
+// The match score is shown as a bar plus the number: the bar makes relative
+// ranking scannable, and the figure keeps it honest.
+.match {
+  display: grid;
+  gap: 3px;
+  min-width: 4.5rem;
+}
+
+.match__bar {
+  height: 6px;
+  background: var(--sk-surface-sunken);
+  border-radius: var(--sk-radius-pill);
+  overflow: hidden;
+}
+
+.match__fill {
+  display: block;
+  height: 100%;
+  background: var(--sk-brand);
+  border-radius: var(--sk-radius-pill);
+}
+
+.match__value {
+  font-size: 0.75rem;
+  color: var(--sk-ink-muted);
+}
+
+.row-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--sk-space-1);
+  flex-wrap: wrap;
+}
+
+.note {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--sk-open);
+  white-space: nowrap;
+}
+
+.note .material-symbols-rounded {
+  font-size: 0.875rem;
+}
+
+.opp-card {
+  display: grid;
+  gap: var(--sk-space-2);
+  padding: var(--sk-space-3);
+  background: var(--sk-surface);
+  border: 1px solid var(--sk-line);
+  border-radius: var(--sk-radius-lg);
+  box-shadow: var(--sk-shadow-sm);
+}
+
+.opp-card__head {
+  display: flex;
+  align-items: center;
+  gap: var(--sk-space-2);
+  flex-wrap: wrap;
+  text-decoration: none;
+  color: inherit;
+}
+
+.opp-card__name {
+  font-family: var(--sk-font-display);
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--sk-ink-strong);
+}
+
+.opp-card__facts {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--sk-space-2);
+  margin: 0;
+  padding: var(--sk-space-2) 0;
+  border-top: 1px solid var(--sk-line-hairline);
+  border-bottom: 1px solid var(--sk-line-hairline);
+}
+
+.opp-card__facts dt {
+  font-size: 0.625rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--sk-ink-subtle);
+}
+
+.opp-card__facts dd {
+  margin: 0;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--sk-ink);
+}
+
+.opp-card__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--sk-space-2);
+  flex-wrap: wrap;
+}
+
+.opp-card__actions .sk-btn {
+  flex: 1 1 auto;
+}
+
+// -----------------------------------------------------------------------------
+// Pager and deal table padding
+// -----------------------------------------------------------------------------
+
+.pager {
+  display: flex;
+  align-items: center;
+  gap: var(--sk-space-2);
+}
+
+.pager__label {
+  font-size: 0.8125rem;
+  color: var(--sk-ink-muted);
+  white-space: nowrap;
+}
+
+.deals-pad {
+  padding: var(--sk-space-3) var(--sk-space-4) var(--sk-space-4);
+}

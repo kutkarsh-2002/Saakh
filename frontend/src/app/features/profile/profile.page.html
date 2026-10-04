@@ -1,0 +1,533 @@
+@if (profile(); as me) {
+  <div class="sk-page">
+    <sk-page-header
+      eyebrow="Your account"
+      title="Profile &amp; verification"
+      subtitle="This is what a new counterparty sees before they decide whether to work with you."
+    >
+      @if (!editing()) {
+        <button type="button" class="sk-btn sk-btn--secondary" (click)="startEdit()">
+          <span class="material-symbols-rounded" aria-hidden="true">edit</span>
+          Edit details
+        </button>
+      }
+    </sk-page-header>
+
+    <!-- The verification banner: all four states live in one component. -->
+    @if (verification(); as state) {
+      <sk-verification-banner
+        [status]="state.status"
+        [rejectionReason]="state.rejectionReason"
+        [lastSubmittedAt]="state.lastSubmittedAt"
+        (action)="scrollToEvidence()"
+      />
+    }
+
+    @if (blockedFrom(); as blocked) {
+      @if (me.verificationStatus !== VerificationStatus.Active) {
+        <p class="redirected" role="status">
+          <span class="material-symbols-rounded" aria-hidden="true">lock</span>
+          <span>
+            <strong>{{ blocked }}</strong> is locked until your account is verified. Everything
+            below is still yours to edit in the meantime.
+          </span>
+        </p>
+      }
+    }
+
+    @if (me.availabilityStatus === AvailabilityStatus.Suspended) {
+      <p class="suspended" role="status">
+        <span class="material-symbols-rounded" aria-hidden="true">block</span>
+        <span>
+          <strong>An administrator has suspended this profile.</strong>
+          You are hidden from search and cannot send or receive interest.
+          @if (me.suspensionEndDate) {
+            The suspension lifts on {{ formatDate(me.suspensionEndDate) }}.
+          } @else {
+            The suspension is permanent.
+          }
+          Your in-flight deals are frozen until it lifts.
+        </span>
+      </p>
+    }
+
+    <div class="layout">
+      <!-- ===== Left: identity + trust ==================================== -->
+      <div class="col">
+        <section class="sk-card sk-card-pad identity">
+          <div class="identity__top">
+            <span class="identity__avatar" aria-hidden="true">{{ me.name.charAt(0) }}</span>
+            <div class="identity__names">
+              <h2>{{ me.name }}</h2>
+              <p class="identity__role">
+                <span class="material-symbols-rounded" aria-hidden="true">{{
+                  roleMeta[me.role].icon
+                }}</span>
+                {{ roleMeta[me.role].label }}
+                <span class="identity__sep" aria-hidden="true">·</span>
+                {{ sizeLabel[me.businessSize] }}
+              </p>
+            </div>
+          </div>
+
+          <div class="identity__badges">
+            <sk-verification-badge
+              [verified]="me.gstinVerified"
+              [legalName]="me.gstinLegalName"
+              [gstin]="me.gstinMasked"
+              [showUnverified]="
+                !me.gstinVerified && me.verificationStatus === VerificationStatus.Active
+              "
+            />
+            <sk-status-pill [verification]="me.verificationStatus" />
+            <sk-status-pill [availability]="me.availabilityStatus" />
+          </div>
+
+          <dl class="facts">
+            <div class="facts__row">
+              <dt>Based in</dt>
+              <dd>{{ me.district }}, {{ me.state }}, {{ me.country }}</dd>
+            </div>
+            <div class="facts__row">
+              <dt>{{ me.role === ProfileRole.Lender ? 'Provides' : 'Needs' }}</dt>
+              <dd>
+                <span class="cat">
+                  <span class="material-symbols-rounded" aria-hidden="true">{{
+                    categoryMeta[me.category].icon
+                  }}</span>
+                  {{ me.subType?.displayName ?? categoryMeta[me.category].label }}
+                </span>
+              </dd>
+            </div>
+            <div class="facts__row">
+              <dt>{{ me.role === ProfileRole.Lender ? 'Supply capacity' : 'Receiving capacity' }}</dt>
+              <dd class="sk-figure">{{ capacityLabel() }}</dd>
+            </div>
+            @if (me.ownTradeDescription) {
+              <div class="facts__row">
+                <dt>Own trade</dt>
+                <dd>{{ me.ownTradeDescription }}</dd>
+              </div>
+            }
+            @if (me.gstinMasked) {
+              <div class="facts__row">
+                <dt>GSTIN</dt>
+                <dd class="gstin">{{ me.gstinMasked }}</dd>
+              </div>
+            }
+            @if (me.phone) {
+              <div class="facts__row">
+                <dt>Phone</dt>
+                <dd>
+                  {{ me.phone }}
+                  <span class="verified-note">
+                    <span class="material-symbols-rounded" aria-hidden="true">check_circle</span>
+                    OTP verified
+                  </span>
+                </dd>
+              </div>
+            }
+            <div class="facts__row">
+              <dt>On Saakh since</dt>
+              <dd>{{ formatDate(me.createdAt) }}</dd>
+            </div>
+          </dl>
+        </section>
+
+        <section class="sk-card sk-card-pad">
+          <sk-trust-summary [trust]="me.trust" />
+          @if (me.trust.totalDeals === 0) {
+            <p class="trust-note">
+              <span class="material-symbols-rounded" aria-hidden="true">lightbulb</span>
+              @if (me.verificationStatus === VerificationStatus.Active) {
+                Your record starts the moment your first deal settles. Until then, counterparties
+                see your verified identity and your declared capacity, which is still more than
+                they get from a stranger.
+              } @else {
+                Nothing here yet, and nothing will be until your account is verified and your
+                first deal settles. An empty record is not a bad one: counterparties are shown
+                that you are new, not that you were rated poorly.
+              }
+            </p>
+          }
+        </section>
+
+        <!-- Self-service Active/Inactive toggle -->
+        @if (
+          me.availabilityStatus === AvailabilityStatus.Active ||
+          me.availabilityStatus === AvailabilityStatus.Inactive
+        ) {
+          <section class="sk-card sk-card-pad">
+            <h3>Visibility in search</h3>
+            <p class="sk-meta avail__text">
+              Going inactive takes you out of search and stops new interest requests reaching you.
+              Your in-flight deals carry on exactly as they are, and you can switch back whenever
+              you want.
+            </p>
+
+            <div class="avail__options" role="group" aria-label="Search visibility">
+              <button
+                type="button"
+                class="avail__option"
+                [class.avail__option--on]="me.availabilityStatus === AvailabilityStatus.Active"
+                [attr.aria-pressed]="me.availabilityStatus === AvailabilityStatus.Active"
+                (click)="setAvailability(true)"
+              >
+                <span class="material-symbols-rounded" aria-hidden="true">visibility</span>
+                <span>
+                  <strong>Active</strong>
+                  <span>Visible in search, accepting interest</span>
+                </span>
+              </button>
+
+              <button
+                type="button"
+                class="avail__option"
+                [class.avail__option--on]="me.availabilityStatus === AvailabilityStatus.Inactive"
+                [attr.aria-pressed]="me.availabilityStatus === AvailabilityStatus.Inactive"
+                (click)="setAvailability(false)"
+              >
+                <span class="material-symbols-rounded" aria-hidden="true">pause_circle</span>
+                <span>
+                  <strong>Inactive</strong>
+                  <span>Hidden from search, no new interest</span>
+                </span>
+              </button>
+            </div>
+          </section>
+        }
+      </div>
+
+      <!-- ===== Right: edit form or verification ========================== -->
+      <div class="col">
+        @if (editing()) {
+          <form class="sk-card sk-card-pad edit" [formGroup]="form" (ngSubmit)="save()">
+            <h2>Edit your details</h2>
+            <p class="sk-meta">
+              Your role and your GSTIN are fixed once the account exists — those are the identity
+              the trust record is anchored to.
+            </p>
+
+            <div class="sk-field">
+              <label for="name">Business or personal name</label>
+              <input
+                id="name"
+                type="text"
+                class="sk-input"
+                formControlName="name"
+                [class.is-invalid]="invalid('name')"
+              />
+              @if (invalid('name')) {
+                <p class="sk-error">
+                  <span class="material-symbols-rounded" aria-hidden="true">error</span>
+                  Enter the name you trade under.
+                </p>
+              }
+            </div>
+
+            <div class="sk-grid-2">
+              <div class="sk-field">
+                <label for="isBusiness">Registered business?</label>
+                <select id="isBusiness" class="sk-select" formControlName="isBusiness">
+                  <option [value]="false">No — individual</option>
+                  <option [value]="true">Yes — registered business</option>
+                </select>
+              </div>
+              <div class="sk-field">
+                <label for="businessSize">Size</label>
+                <select id="businessSize" class="sk-select" formControlName="businessSize">
+                  <option [value]="BusinessSize.Individual">Individual</option>
+                  <option [value]="BusinessSize.Small">Small</option>
+                  <option [value]="BusinessSize.Medium">Medium</option>
+                  <option [value]="BusinessSize.Large">Large</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="sk-grid-2">
+              <div class="sk-field">
+                <label for="state">State</label>
+                <select
+                  id="state"
+                  class="sk-select"
+                  formControlName="state"
+                  (change)="onStateChange()"
+                  [class.is-invalid]="invalid('state')"
+                >
+                  <option value="">Select a state</option>
+                  @for (option of states; track option.name) {
+                    <option [value]="option.name">{{ option.name }}</option>
+                  }
+                </select>
+              </div>
+              <div class="sk-field">
+                <label for="district">District</label>
+                <select
+                  id="district"
+                  class="sk-select"
+                  formControlName="district"
+                  [class.is-invalid]="invalid('district')"
+                >
+                  <option value="">
+                    {{ districts().length === 0 ? 'Pick a state first' : 'Select a district' }}
+                  </option>
+                  @for (district of districts(); track district) {
+                    <option [value]="district">{{ district }}</option>
+                  }
+                </select>
+              </div>
+            </div>
+
+            <div class="sk-grid-2">
+              <div class="sk-field">
+                <label for="category">Category</label>
+                <select
+                  id="category"
+                  class="sk-select"
+                  formControlName="category"
+                  (change)="onCategoryChange()"
+                >
+                  <option [value]="DealCategory.Money">Money</option>
+                  <option [value]="DealCategory.RawMaterial">Raw material</option>
+                </select>
+              </div>
+              <div class="sk-field">
+                <label for="subType">Type</label>
+                <select id="subType" class="sk-select" formControlName="categorySubTypeId">
+                  @for (option of subTypes(); track option.id) {
+                    <option [value]="option.id">{{ option.displayName }}</option>
+                  }
+                </select>
+              </div>
+            </div>
+
+            <fieldset class="capacity">
+              <legend>
+                Capacity range
+                <span class="capacity__unit">in {{ capacityUnit() }}</span>
+              </legend>
+              <div class="sk-grid-2">
+                <div class="sk-field">
+                  <label for="capacityMin">From</label>
+                  <input
+                    id="capacityMin"
+                    type="number"
+                    class="sk-input"
+                    formControlName="capacityMin"
+                    min="0"
+                  />
+                </div>
+                <div class="sk-field">
+                  <label for="capacityMax">Up to</label>
+                  <input
+                    id="capacityMax"
+                    type="number"
+                    class="sk-input"
+                    formControlName="capacityMax"
+                    min="0"
+                  />
+                </div>
+              </div>
+            </fieldset>
+
+            @if (me.role === ProfileRole.Seeker) {
+              <div class="sk-field">
+                <label for="ownTrade">What trade are you in?</label>
+                <input
+                  id="ownTrade"
+                  type="text"
+                  class="sk-input"
+                  formControlName="ownTradeDescription"
+                />
+              </div>
+            }
+
+            <div class="edit__actions">
+              <button type="button" class="sk-btn sk-btn--secondary" (click)="cancelEdit()">
+                Cancel
+              </button>
+              <button type="submit" class="sk-btn sk-btn--primary" [disabled]="saving()">
+                {{ saving() ? 'Saving…' : 'Save changes' }}
+              </button>
+            </div>
+          </form>
+        }
+
+        <!-- ===== Verification ============================================ -->
+        <section class="sk-card sk-card-pad" id="evidence">
+          <h2>Identity verification</h2>
+
+          @if (me.gstinVerified) {
+            <p class="verified-block">
+              <span class="material-symbols-rounded" aria-hidden="true">verified</span>
+              <span>
+                <strong>Your GSTIN was validated against the government registry.</strong>
+                @if (me.gstinLegalName) {
+                  The registry returned <strong>{{ me.gstinLegalName }}</strong> for it.
+                }
+                That is the strongest identity signal on the platform, and it is why your account
+                opened immediately with nothing locked.
+              </span>
+            </p>
+          } @else {
+            <p class="sk-meta verify__intro">
+              You signed up without a GSTIN, so an administrator checks who you are by reviewing
+              documents you upload. This keeps the barrier low for vendors who were never in the
+              formal system, while still giving the platform a human checkpoint.
+            </p>
+
+            @if (verification(); as state) {
+              @if (state.status === VerificationStatus.Active) {
+                <p class="verified-block">
+                  <span class="material-symbols-rounded" aria-hidden="true">how_to_reg</span>
+                  <span>
+                    <strong>An administrator approved your documents.</strong>
+                    Your account is open and you appear in search.
+                  </span>
+                </p>
+              }
+
+              @if (state.status !== VerificationStatus.Active) {
+                <div class="upload">
+                  <div class="sk-field">
+                    <label for="docType">What are you uploading?</label>
+                    <select
+                      id="docType"
+                      class="sk-select"
+                      [value]="documentType()"
+                      (change)="documentType.set($any($event.target).value)"
+                    >
+                      @for (type of evidenceTypes; track type) {
+                        <option [value]="type">{{ type }}</option>
+                      }
+                    </select>
+                  </div>
+
+                  <div class="sk-field">
+                    <label for="files">Attach photos or PDFs</label>
+                    <input
+                      id="files"
+                      type="file"
+                      class="sk-input upload__input"
+                      multiple
+                      accept="image/jpeg,image/png,image/webp,application/pdf"
+                      (change)="onFilesPicked($event)"
+                    />
+                    <p class="sk-hint">
+                      JPG, PNG, WEBP or PDF, up to 10 MB each. A clear photo taken in good light is
+                      accepted more often than a scan of a scan.
+                    </p>
+                  </div>
+
+                  @if (selectedFiles().length > 0) {
+                    <ul class="picked">
+                      @for (file of selectedFiles(); track file.name; let i = $index) {
+                        <li class="picked__item">
+                          <span class="material-symbols-rounded" aria-hidden="true">
+                            {{ file.type === 'application/pdf' ? 'picture_as_pdf' : 'image' }}
+                          </span>
+                          <span class="picked__name sk-truncate">{{ file.name }}</span>
+                          <span class="picked__size sk-meta">{{ fileSize(file.size) }}</span>
+                          <button
+                            type="button"
+                            class="picked__remove"
+                            (click)="removeFile(i)"
+                            [attr.aria-label]="'Remove ' + file.name"
+                          >
+                            <span class="material-symbols-rounded" aria-hidden="true">close</span>
+                          </button>
+                        </li>
+                      }
+                    </ul>
+                  }
+
+                  <button
+                    type="button"
+                    class="sk-btn sk-btn--primary"
+                    [disabled]="uploading() || selectedFiles().length === 0"
+                    (click)="submitEvidence()"
+                  >
+                    <span class="material-symbols-rounded" aria-hidden="true">upload_file</span>
+                    {{
+                      uploading()
+                        ? 'Uploading…'
+                        : state.status === VerificationStatus.Pending
+                          ? 'Add another document'
+                          : 'Submit for review'
+                    }}
+                  </button>
+
+                  <p class="accepted">
+                    <span class="sk-eyebrow">What administrators accept</span>
+                    <span>
+                      Any one of: {{ evidenceTypes.join(', ').toLowerCase() }}. One clear document
+                      that shows your name and your place of business is usually enough.
+                    </span>
+                  </p>
+                </div>
+              }
+
+              @if (state.evidence.length > 0) {
+                <div class="submitted">
+                  <h3>What you have submitted</h3>
+                  <ul class="docs">
+                    @for (document of state.evidence; track document.id) {
+                      <li class="docs__item">
+                        <span class="material-symbols-rounded docs__icon" aria-hidden="true">
+                          {{ document.contentType === 'application/pdf' ? 'picture_as_pdf' : 'image' }}
+                        </span>
+                        <span class="docs__body">
+                          <span class="docs__name">{{ document.documentType }}</span>
+                          <span class="docs__file sk-meta">{{ document.fileName }}</span>
+                          <span class="docs__when sk-meta">
+                            Submitted {{ formatDateTime(document.submittedAt) }}
+                          </span>
+                          @if (document.rejectionReason) {
+                            <span class="docs__reason">{{ document.rejectionReason }}</span>
+                          }
+                        </span>
+                        <span
+                          class="docs__decision"
+                          [class.docs__decision--ok]="document.decision === EvidenceDecision.Approved"
+                          [class.docs__decision--no]="document.decision === EvidenceDecision.Rejected"
+                        >
+                          {{
+                            document.decision === EvidenceDecision.Approved
+                              ? 'Approved'
+                              : document.decision === EvidenceDecision.Rejected
+                                ? 'Rejected'
+                                : 'Awaiting review'
+                          }}
+                        </span>
+                      </li>
+                    }
+                  </ul>
+                </div>
+              }
+            }
+          }
+        </section>
+
+        @if (me.verificationStatus === VerificationStatus.Active) {
+          <section class="sk-card sk-card-pad next-steps">
+            <h3>Where to go next</h3>
+            <div class="next-steps__links">
+              <a class="sk-btn sk-btn--primary" routerLink="/dashboard">
+                <span class="material-symbols-rounded" aria-hidden="true">explore</span>
+                Find counterparties
+              </a>
+              <a class="sk-btn sk-btn--secondary" routerLink="/interests">
+                <span class="material-symbols-rounded" aria-hidden="true">handshake</span>
+                Your interests
+              </a>
+              <a class="sk-btn sk-btn--secondary" routerLink="/deals">
+                <span class="material-symbols-rounded" aria-hidden="true">receipt_long</span>
+                Open deals
+              </a>
+            </div>
+          </section>
+        }
+      </div>
+    </div>
+  </div>
+}

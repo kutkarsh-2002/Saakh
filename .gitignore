@@ -1,0 +1,29 @@
+# ---- Secrets ----------------------------------------------------------------
+.env
+*.pfx
+
+# ---- .NET -------------------------------------------------------------------
+[Bb]in/
+[Oo]bj/
+TestResults/
+*.trx
+*.coverage
+coverage.*.xml
+*.user
+*.suo
+.vs/
+
+# Uploaded evidence documents never belong in version control.
+backend/Saakh.Api/storage/
+
+# ---- Node / Angular ---------------------------------------------------------
+node_modules/
+dist/
+.angular/
+*.log
+npm-debug.log*
+
+# ---- Editors / OS -----------------------------------------------------------
+.DS_Store
+Thumbs.db
+.idea/

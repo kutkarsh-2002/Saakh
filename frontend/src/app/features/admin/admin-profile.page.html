@@ -1,0 +1,346 @@
+<nav class="crumbs" aria-label="Breadcrumb">
+  <a routerLink="/admin/directory">
+    <span class="material-symbols-rounded" aria-hidden="true">arrow_back</span>
+    User directory
+  </a>
+</nav>
+
+@if (loading()) {
+  <div class="sk-card"><sk-loading [count]="8" label="Loading the profile" /></div>
+} @else if (detail(); as view) {
+  @if (view.profile; as profile) {
+    <header class="sk-card sk-card-pad head">
+      <div class="head__left">
+        <div class="head__top">
+          <h2>{{ profile.name }}</h2>
+          <sk-verification-badge
+            [verified]="profile.gstinVerified"
+            [legalName]="profile.gstinLegalName"
+            [gstin]="profile.gstinMasked"
+            [showUnverified]="
+              !profile.gstinVerified && profile.verificationStatus === VerificationStatus.Active
+            "
+          />
+        </div>
+
+        <div class="head__pills">
+          <sk-status-pill [verification]="profile.verificationStatus" />
+          <sk-status-pill [availability]="profile.availabilityStatus" />
+          <span class="chip">{{ roleMeta[profile.role].label }}</span>
+          <span class="chip">{{ sizeLabel[profile.businessSize] }}</span>
+        </div>
+
+        <dl class="head__facts">
+          <div>
+            <dt>Email</dt>
+            <dd class="break">{{ view.email }}</dd>
+          </div>
+          <div>
+            <dt>Phone</dt>
+            <dd>
+              {{ profile.phone ?? '—' }}
+              @if (view.phoneVerified) {
+                <span class="otp">
+                  <span class="material-symbols-rounded" aria-hidden="true">check_circle</span>
+                  OTP
+                </span>
+              }
+            </dd>
+          </div>
+          <div>
+            <dt>GSTIN</dt>
+            <dd class="break">{{ profile.gstinMasked ?? 'None — manual review path' }}</dd>
+          </div>
+          <div>
+            <dt>Region</dt>
+            <dd>{{ profile.district }}, {{ profile.state }}</dd>
+          </div>
+          <div>
+            <dt>Deals in</dt>
+            <dd>{{ profile.subType?.displayName ?? categoryMeta[profile.category].label }}</dd>
+          </div>
+          <div>
+            <dt>Capacity</dt>
+            <dd class="sk-figure">{{ capacity() }}</dd>
+          </div>
+          <div>
+            <dt>Joined</dt>
+            <dd>{{ formatDate(profile.createdAt) }}</dd>
+          </div>
+          @if (profile.suspensionEndDate) {
+            <div>
+              <dt>Suspended until</dt>
+              <dd>{{ formatDate(profile.suspensionEndDate) }}</dd>
+            </div>
+          }
+          @if (profile.ownTradeDescription) {
+            <div class="wide">
+              <dt>States their trade as</dt>
+              <dd>{{ profile.ownTradeDescription }}</dd>
+            </div>
+          }
+          @if (profile.rejectionReason) {
+            <div class="wide">
+              <dt>Current rejection reason</dt>
+              <dd class="reason">{{ profile.rejectionReason }}</dd>
+            </div>
+          }
+        </dl>
+      </div>
+
+      <div class="head__trust">
+        <sk-trust-summary [trust]="profile.trust" />
+      </div>
+    </header>
+
+    <div class="layout">
+      <div class="col">
+        <!-- Moderation actions -->
+        <section class="sk-card sk-card-pad mod">
+          <h3>Moderation</h3>
+          <p class="sk-meta mod__intro">
+            Every action here is logged against your admin account with a timestamp.
+          </p>
+
+          @if (profile.verificationStatus === VerificationStatus.Pending) {
+            <div class="mod__group">
+              <p class="sk-eyebrow">Verification decision</p>
+              <button
+                type="button"
+                class="sk-btn sk-btn--primary sk-btn--block"
+                [disabled]="busy()"
+                (click)="approve()"
+              >
+                <span class="material-symbols-rounded" aria-hidden="true">how_to_reg</span>
+                Approve account
+              </button>
+              <button
+                type="button"
+                class="sk-btn sk-btn--destructive sk-btn--block"
+                [disabled]="busy()"
+                (click)="reject()"
+              >
+                <span class="material-symbols-rounded" aria-hidden="true">block</span>
+                Reject documents
+              </button>
+            </div>
+          } @else if (profile.verificationStatus === VerificationStatus.NeedsApproval) {
+            <p class="mod__note">
+              <span class="material-symbols-rounded" aria-hidden="true">info</span>
+              This account has not submitted any documents yet, so there is nothing to review.
+            </p>
+          }
+
+          <div class="mod__group">
+            <p class="sk-eyebrow">Actions</p>
+
+            <button
+              type="button"
+              class="sk-btn sk-btn--secondary sk-btn--block"
+              [disabled]="busy()"
+              (click)="warn()"
+            >
+              <span class="material-symbols-rounded" aria-hidden="true">campaign</span>
+              Record a warning
+            </button>
+            <p class="mod__hint">Admin-visible only. Never shown publicly, and changes no access.</p>
+
+            @if (profile.availabilityStatus === AvailabilityStatus.Suspended) {
+              <button
+                type="button"
+                class="sk-btn sk-btn--primary sk-btn--block"
+                [disabled]="busy()"
+                (click)="liftSuspension()"
+              >
+                <span class="material-symbols-rounded" aria-hidden="true">lock_open</span>
+                Lift suspension
+              </button>
+              <p class="mod__hint">
+                Returns them to search and unfreezes their in-flight deals immediately.
+              </p>
+            } @else if (profile.availabilityStatus !== AvailabilityStatus.Removed) {
+              <button
+                type="button"
+                class="sk-btn sk-btn--destructive sk-btn--block"
+                [disabled]="busy()"
+                (click)="suspend()"
+              >
+                <span class="material-symbols-rounded" aria-hidden="true">block</span>
+                Suspend
+              </button>
+              <p class="mod__hint">
+                Hidden from search for a fixed window.
+                @if (activeDeals().length > 0) {
+                  Freezes {{ activeDeals().length }} in-flight
+                  {{ activeDeals().length === 1 ? 'deal' : 'deals' }}.
+                }
+              </p>
+            }
+
+            @if (profile.availabilityStatus !== AvailabilityStatus.Removed) {
+              <button
+                type="button"
+                class="sk-btn sk-btn--destructive sk-btn--block"
+                [disabled]="busy()"
+                (click)="remove()"
+              >
+                <span class="material-symbols-rounded" aria-hidden="true">person_off</span>
+                Remove from platform
+              </button>
+              <p class="mod__hint">
+                Deactivates the profile entirely. History is retained for audit, and the console
+                cannot undo this.
+              </p>
+            } @else {
+              <p class="mod__note mod__note--removed">
+                <span class="material-symbols-rounded" aria-hidden="true">person_off</span>
+                This profile has been removed. Its history is retained for audit.
+              </p>
+            }
+          </div>
+        </section>
+
+        <!-- Evidence -->
+        <section class="sk-card sk-card-pad">
+          <h3>Submitted evidence</h3>
+          @if (view.evidence.length === 0) {
+            <p class="empty-note">
+              @if (profile.gstinVerified) {
+                None needed — this account was verified against the GST registry at signup.
+              } @else {
+                Nothing submitted yet.
+              }
+            </p>
+          } @else {
+            <ul class="docs">
+              @for (document of view.evidence; track document.id) {
+                <li class="docs__item">
+                  <span class="material-symbols-rounded docs__icon" aria-hidden="true">
+                    {{ document.contentType === 'application/pdf' ? 'picture_as_pdf' : 'image' }}
+                  </span>
+                  <span class="docs__body">
+                    <span class="docs__type">{{ document.documentType }}</span>
+                    <span class="docs__file sk-meta">{{ document.fileName }}</span>
+                    <span class="docs__when sk-meta">
+                      {{ formatDateTime(document.submittedAt) }}
+                      @if (document.reviewedAt) {
+                        · reviewed {{ formatDateTime(document.reviewedAt) }}
+                      }
+                    </span>
+                    @if (document.rejectionReason) {
+                      <span class="docs__reason">{{ document.rejectionReason }}</span>
+                    }
+                  </span>
+                  <span class="docs__right">
+                    <span
+                      class="decision"
+                      [class.decision--ok]="document.decision === EvidenceDecision.Approved"
+                      [class.decision--no]="document.decision === EvidenceDecision.Rejected"
+                    >
+                      {{
+                        document.decision === EvidenceDecision.Approved
+                          ? 'Approved'
+                          : document.decision === EvidenceDecision.Rejected
+                            ? 'Rejected'
+                            : 'Awaiting'
+                      }}
+                    </span>
+                    <a
+                      class="sk-btn sk-btn--secondary sk-btn--sm"
+                      [href]="evidenceUrl(document.id)"
+                      target="_blank"
+                      rel="noopener"
+                    >
+                      View
+                    </a>
+                  </span>
+                </li>
+              }
+            </ul>
+          }
+        </section>
+      </div>
+
+      <div class="col">
+        <!-- Deals -->
+        <section class="sk-card">
+          <div class="sk-card-head">
+            <div>
+              <h3>Deal history</h3>
+              <p class="sk-meta">
+                {{ view.deals.length }} {{ view.deals.length === 1 ? 'deal' : 'deals' }} on record,
+                {{ activeDeals().length }} still in flight.
+              </p>
+            </div>
+          </div>
+
+          @if (view.deals.length === 0) {
+            <p class="empty-note pad">No deals on this profile yet.</p>
+          } @else {
+            <div class="sk-table-wrap">
+              <table class="sk-table">
+                <caption class="sk-sr-only">Deals this profile has been part of</caption>
+                <thead>
+                  <tr>
+                    <th scope="col">Deal</th>
+                    <th scope="col">Counterparty</th>
+                    <th scope="col" class="sk-num">Amount / qty</th>
+                    <th scope="col">Settlement</th>
+                    <th scope="col">Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (deal of view.deals; track deal.id) {
+                    <tr>
+                      <td class="sk-cell-strong">{{ deal.reference }}</td>
+                      <td>{{ deal.counterparty.name }}</td>
+                      <td class="sk-num">
+                        {{ dealAmount(deal.capacity, deal.capacityUnit, deal.category) }}
+                      </td>
+                      <td>{{ formatDate(deal.estimatedSettlementTime) }}</td>
+                      <td>
+                        <sk-status-pill [dealState]="deal.dealState" />
+                        @if (deal.dealState === DealState.Halted && deal.haltedByName) {
+                          <span class="sub">halted by {{ deal.haltedByName }}</span>
+                        }
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          }
+        </section>
+
+        <!-- Action log -->
+        <section class="sk-card sk-card-pad">
+          <h3>Action log</h3>
+          <p class="sk-meta log__intro">Every admin decision taken on this profile.</p>
+
+          @if (view.actionLog.length === 0) {
+            <p class="empty-note">No admin action has been taken on this profile.</p>
+          } @else {
+            <ol class="log">
+              @for (entry of view.actionLog; track entry.id) {
+                <li class="log__item">
+                  <span class="log__action">{{ actionLabels[entry.actionType] }}</span>
+                  @if (entry.suspensionDuration) {
+                    <span class="chip">{{ durationLabels[entry.suspensionDuration] }}</span>
+                  }
+                  @if (entry.notes) {
+                    <p class="log__notes">{{ entry.notes }}</p>
+                  }
+                  <p class="log__meta sk-meta">
+                    {{ entry.adminName }}
+                    <span aria-hidden="true">·</span>
+                    {{ formatDateTime(entry.occurredAt) }}
+                  </p>
+                </li>
+              }
+            </ol>
+          }
+        </section>
+      </div>
+    </div>
+  }
+}

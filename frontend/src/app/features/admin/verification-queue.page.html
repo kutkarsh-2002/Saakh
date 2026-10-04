@@ -1,0 +1,228 @@
+<section class="sk-card">
+  <div class="sk-card-head">
+    <div>
+      <h2>Verification queue</h2>
+      <p class="sk-meta">
+        No-GSTIN accounts are locked out of every feature until one of these decisions is made.
+        Target turnaround is 48 hours.
+      </p>
+    </div>
+    <span class="sk-spacer"></span>
+    <div class="chips" role="group" aria-label="Filter the queue">
+      <sk-filter-chip
+        [label]="'Awaiting review (' + pending().length + ')'"
+        icon="hourglass_top"
+        [selected]="filter() === 'pending'"
+        (toggled)="setFilter('pending')"
+      />
+      <sk-filter-chip
+        [label]="'Needs approval (' + needsApproval().length + ')'"
+        icon="warning"
+        [selected]="filter() === 'needs'"
+        (toggled)="setFilter('needs')"
+      />
+      <sk-filter-chip
+        [label]="'Rejected (' + rejected().length + ')'"
+        icon="cancel"
+        [selected]="filter() === 'rejected'"
+        (toggled)="setFilter('rejected')"
+      />
+      <sk-filter-chip
+        label="All"
+        [selected]="filter() === 'all'"
+        (toggled)="setFilter('all')"
+      />
+    </div>
+  </div>
+
+  @if (breached() > 0) {
+    <p class="sla" role="status">
+      <span class="material-symbols-rounded" aria-hidden="true">schedule</span>
+      <span>
+        <strong>{{ breached() }} {{ breached() === 1 ? 'account has' : 'accounts have' }} been
+        waiting over 48 hours.</strong>
+        Every hour here is an hour that vendor cannot search, send interest, or open a deal.
+      </span>
+    </p>
+  }
+
+  @if (loading()) {
+    <sk-loading [count]="5" label="Loading the queue" />
+  } @else if (rows().length === 0) {
+    <sk-empty-state
+      icon="fact_check"
+      [title]="
+        filter() === 'pending'
+          ? 'Nothing awaiting review'
+          : filter() === 'needs'
+            ? 'No accounts waiting to submit'
+            : filter() === 'rejected'
+              ? 'No rejected accounts'
+              : 'The queue is empty'
+      "
+      [message]="
+        filter() === 'pending'
+          ? 'Every submitted document has been reviewed. New submissions appear here immediately.'
+          : 'Nothing to triage in this group right now.'
+      "
+    />
+  } @else {
+    <ul class="queue">
+      @for (row of rows(); track row.profile.id) {
+        <li class="row" [class.row--breached]="isBreached(row)">
+          <!-- Left: who they are -->
+          <div class="row__who">
+            <div class="row__head">
+              <a class="row__name" [routerLink]="['/admin/directory', row.profile.id]">
+                {{ row.profile.name }}
+              </a>
+              <sk-status-pill [verification]="row.profile.verificationStatus" />
+            </div>
+
+            <dl class="row__facts">
+              <div>
+                <dt>Role</dt>
+                <dd>{{ roleMeta[row.profile.role].label }}</dd>
+              </div>
+              <div>
+                <dt>Deals in</dt>
+                <dd>
+                  {{
+                    row.profile.subType?.displayName ?? categoryMeta[row.profile.category].label
+                  }}
+                </dd>
+              </div>
+              <div>
+                <dt>Region</dt>
+                <dd>{{ row.profile.district }}, {{ row.profile.state }}</dd>
+              </div>
+              <div>
+                <dt>Capacity</dt>
+                <dd class="sk-figure">{{ capacity(row) }}</dd>
+              </div>
+              <div>
+                <dt>Email</dt>
+                <dd class="row__email">{{ row.email }}</dd>
+              </div>
+              <div>
+                <dt>Phone</dt>
+                <dd>
+                  {{ row.phone ?? '—' }}
+                  @if (row.phoneVerified) {
+                    <span
+                      class="row__otp"
+                      matTooltip="Phone OTP was completed at signup, which is mandatory on both verification paths."
+                    >
+                      <span class="material-symbols-rounded" aria-hidden="true">check_circle</span>
+                      OTP
+                    </span>
+                  }
+                </dd>
+              </div>
+              @if (row.profile.ownTradeDescription) {
+                <div class="row__facts-wide">
+                  <dt>States their trade as</dt>
+                  <dd>{{ row.profile.ownTradeDescription }}</dd>
+                </div>
+              }
+            </dl>
+
+            @if (row.profile.rejectionReason) {
+              <p class="row__previous">
+                <span class="sk-eyebrow">Previously rejected because</span>
+                <span>{{ row.profile.rejectionReason }}</span>
+              </p>
+            }
+          </div>
+
+          <!-- Middle: the evidence -->
+          <div class="row__evidence">
+            <div class="row__evidence-head">
+              <p class="sk-eyebrow">Submitted documents</p>
+              <span
+                class="row__waiting"
+                [class.row__waiting--breached]="isBreached(row)"
+                [matTooltip]="
+                  row.submittedAt ? 'Submitted ' + formatDateTime(row.submittedAt) : ''
+                "
+              >
+                <span class="material-symbols-rounded" aria-hidden="true">schedule</span>
+                {{ waitingLabel(row) }}
+              </span>
+            </div>
+
+            @if (row.evidence.length === 0) {
+              <p class="row__nodocs">
+                Nothing submitted yet. This account is in Needs Approval, so there is nothing to
+                decide on — they have to upload a document first.
+              </p>
+            } @else {
+              <ul class="docs">
+                @for (document of row.evidence; track document.id) {
+                  <li class="docs__item">
+                    <span class="material-symbols-rounded docs__icon" aria-hidden="true">
+                      {{
+                        document.contentType === 'application/pdf' ? 'picture_as_pdf' : 'image'
+                      }}
+                    </span>
+                    <span class="docs__body">
+                      <span class="docs__type">{{ document.documentType }}</span>
+                      <span class="docs__file sk-meta">{{ document.fileName }}</span>
+                      <span class="docs__when sk-meta">
+                        {{ formatDateTime(document.submittedAt) }}
+                      </span>
+                    </span>
+                    <a
+                      class="sk-btn sk-btn--secondary sk-btn--sm"
+                      [href]="evidenceUrl(document.id)"
+                      target="_blank"
+                      rel="noopener"
+                    >
+                      <span class="material-symbols-rounded" aria-hidden="true">open_in_new</span>
+                      View
+                    </a>
+                  </li>
+                }
+              </ul>
+            }
+          </div>
+
+          <!-- Right: the decision -->
+          <div class="row__decide">
+            @if (row.profile.verificationStatus === VerificationStatus.NeedsApproval) {
+              <p class="row__blocked">
+                <span class="material-symbols-rounded" aria-hidden="true">block</span>
+                No decision possible until they submit something.
+              </p>
+            } @else {
+              <button
+                type="button"
+                class="sk-btn sk-btn--primary sk-btn--block"
+                [disabled]="busyId() === row.profile.id"
+                (click)="approve(row)"
+              >
+                <span class="material-symbols-rounded" aria-hidden="true">how_to_reg</span>
+                Approve
+              </button>
+              <button
+                type="button"
+                class="sk-btn sk-btn--destructive sk-btn--block"
+                [disabled]="busyId() === row.profile.id"
+                (click)="reject(row)"
+              >
+                <span class="material-symbols-rounded" aria-hidden="true">block</span>
+                Reject
+              </button>
+              <a
+                class="sk-btn sk-btn--quiet sk-btn--sm"
+                [routerLink]="['/admin/directory', row.profile.id]"
+              >
+                Full profile
+              </a>
+            }
+          </div>
+        </li>
+      }
+    </ul>
+  }
+</section>

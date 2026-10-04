@@ -1,0 +1,159 @@
+<div class="sk-page">
+  <sk-page-header
+    eyebrow="Interests"
+    title="Who wants to do business"
+    [subtitle]="
+      'Interest is a one-sided signal. Chat opens only when it is accepted, and no deal exists until one of you raises a ticket.'
+    "
+  >
+    <a class="sk-btn sk-btn--primary" routerLink="/dashboard">
+      <span class="material-symbols-rounded" aria-hidden="true">explore</span>
+      Find {{ counterpartyLabel() }}
+    </a>
+  </sk-page-header>
+
+  <div class="tabs" role="tablist" aria-label="Interest direction">
+    <button
+      type="button"
+      class="tabs__tab"
+      [class.tabs__tab--on]="box() === 'received'"
+      role="tab"
+      [attr.aria-selected]="box() === 'received'"
+      (click)="box.set('received')"
+    >
+      <span class="material-symbols-rounded" aria-hidden="true">inbox</span>
+      Received
+      @if (awaitingMe() > 0) {
+        <span class="tabs__badge sk-figure">{{ awaitingMe() }}</span>
+      }
+    </button>
+    <button
+      type="button"
+      class="tabs__tab"
+      [class.tabs__tab--on]="box() === 'sent'"
+      role="tab"
+      [attr.aria-selected]="box() === 'sent'"
+      (click)="box.set('sent')"
+    >
+      <span class="material-symbols-rounded" aria-hidden="true">send</span>
+      Sent
+      <span class="tabs__count sk-figure">{{ sent().length }}</span>
+    </button>
+  </div>
+
+  @if (loading()) {
+    <div class="sk-card"><sk-loading [count]="4" label="Loading interests" /></div>
+  } @else if (rows().length === 0) {
+    <div class="sk-card">
+      <sk-empty-state
+        [icon]="box() === 'received' ? 'inbox' : 'send'"
+        [title]="box() === 'received' ? 'No interest received yet' : 'You have not sent any interest'"
+        [message]="
+          box() === 'received'
+            ? 'When a counterparty signals they want to work with you, it lands here and you can accept or decline.'
+            : 'Browse the Opportunity dashboard and send interest to anyone whose capacity and track record fit what you need.'
+        "
+      >
+        <a class="sk-btn sk-btn--primary" routerLink="/dashboard">
+          Find {{ counterpartyLabel() }}
+        </a>
+      </sk-empty-state>
+    </div>
+  } @else {
+    <ul class="list">
+      @for (item of rows(); track item.id) {
+        <li class="item sk-card">
+          <div class="item__main">
+            <div class="item__head">
+              <a class="item__name" [routerLink]="['/counterparties', item.counterparty.id]">
+                {{ item.counterparty.name }}
+              </a>
+              <sk-verification-badge
+                [verified]="item.counterparty.gstinVerified"
+                [legalName]="item.counterparty.gstinLegalName"
+                [gstin]="item.counterparty.gstinMasked"
+                size="sm"
+              />
+              <sk-status-pill [interest]="item.status" />
+            </div>
+
+            <p class="item__meta sk-meta">
+              <span class="material-symbols-rounded" aria-hidden="true">{{
+                roleMeta[item.counterparty.role].icon
+              }}</span>
+              {{ roleMeta[item.counterparty.role].label }}
+              <span aria-hidden="true">·</span>
+              {{ item.counterparty.district }}, {{ item.counterparty.state }}
+              <span aria-hidden="true">·</span>
+              {{
+                item.counterparty.subType?.displayName ??
+                  categoryMeta[item.counterparty.category].label
+              }}
+            </p>
+
+            <sk-trust-summary [trust]="item.counterparty.trust" [compact]="true" />
+
+            @if (item.note) {
+              <blockquote class="item__note">
+                <span class="material-symbols-rounded" aria-hidden="true">format_quote</span>
+                <span>{{ item.note }}</span>
+              </blockquote>
+            }
+
+            <p class="item__when sk-meta">
+              {{ item.sentByMe ? 'You sent this' : 'Received' }}
+              {{ formatRelative(item.createdAt) }}
+              @if (item.respondedAt) {
+                <span aria-hidden="true">·</span>
+                answered {{ formatRelative(item.respondedAt) }}
+              }
+            </p>
+          </div>
+
+          <div class="item__actions">
+            @if (item.status === InterestStatus.Sent) {
+              @if (item.sentByMe) {
+                <p class="item__waiting">
+                  <span class="material-symbols-rounded" aria-hidden="true">hourglass_top</span>
+                  Waiting for them to accept
+                </p>
+              } @else {
+                <button type="button" class="sk-btn sk-btn--primary" (click)="accept(item)">
+                  <span class="material-symbols-rounded" aria-hidden="true">check</span>
+                  Accept &amp; open chat
+                </button>
+                <button type="button" class="sk-btn sk-btn--secondary" (click)="decline(item)">
+                  Decline
+                </button>
+              }
+            } @else if (item.status === InterestStatus.Accepted) {
+              @if (item.dealId) {
+                <a class="sk-btn sk-btn--primary" [routerLink]="['/deals', item.dealId]">
+                  <span class="material-symbols-rounded" aria-hidden="true">receipt_long</span>
+                  Open the deal
+                </a>
+                <a class="sk-btn sk-btn--quiet" [routerLink]="['/interests', item.id]">
+                  View chat
+                </a>
+              } @else {
+                <a class="sk-btn sk-btn--primary" [routerLink]="['/interests', item.id]">
+                  <span class="material-symbols-rounded" aria-hidden="true">forum</span>
+                  Negotiate
+                  @if (item.unreadMessages > 0) {
+                    <span class="unread sk-figure">{{ item.unreadMessages }}</span>
+                  }
+                </a>
+                <p class="item__hint">No ticket raised yet</p>
+              }
+            } @else {
+              <p class="item__declined">
+                <span class="material-symbols-rounded" aria-hidden="true">do_not_disturb_on</span>
+                Declined. Nothing was recorded against either profile.
+              </p>
+            }
+          </div>
+        </li>
+      }
+    </ul>
+  }
+</div>

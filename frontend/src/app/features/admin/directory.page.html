@@ -1,0 +1,318 @@
+<section class="sk-card">
+  <div class="sk-card-head">
+    <div>
+      <h2>User directory</h2>
+      <p class="sk-meta">
+        Every registered Profile, including Inactive, Suspended and Removed accounts that discovery
+        hides.
+      </p>
+    </div>
+    <span class="sk-spacer"></span>
+    @if (activeFilters() > 0) {
+      <button type="button" class="sk-btn sk-btn--quiet sk-btn--sm" (click)="clear()">
+        <span class="material-symbols-rounded" aria-hidden="true">filter_alt_off</span>
+        Clear {{ activeFilters() }}
+      </button>
+    }
+  </div>
+
+  <!-- A dense filter grid: an ops user sets several at once rather than
+       drilling through a wizard. -->
+  <div class="filters">
+    <div class="sk-field filters__search">
+      <label for="dirSearch">Search</label>
+      <input
+        id="dirSearch"
+        type="search"
+        class="sk-input"
+        [value]="search()"
+        (input)="search.set($any($event.target).value); page.set(1)"
+        placeholder="Name, district, state or GSTIN"
+      />
+    </div>
+
+    <div class="sk-field">
+      <label for="dirRole">Profile type</label>
+      <select
+        id="dirRole"
+        class="sk-select"
+        [value]="role() ?? ''"
+        (change)="pick($any($event.target).value, role.set)"
+      >
+        <option value="">Any</option>
+        <option [value]="ProfileRole.Lender">Lender</option>
+        <option [value]="ProfileRole.Seeker">Seeker</option>
+      </select>
+    </div>
+
+    <div class="sk-field">
+      <label for="dirCategory">Category</label>
+      <select
+        id="dirCategory"
+        class="sk-select"
+        [value]="category() ?? ''"
+        (change)="onCategoryChange($any($event.target).value)"
+      >
+        <option value="">Any</option>
+        <option [value]="DealCategory.Money">Money</option>
+        <option [value]="DealCategory.RawMaterial">Raw material</option>
+      </select>
+    </div>
+
+    <div class="sk-field">
+      <label for="dirSubType">Type</label>
+      <select
+        id="dirSubType"
+        class="sk-select"
+        [value]="subTypeId() ?? ''"
+        (change)="pick($any($event.target).value, subTypeId.set)"
+      >
+        <option value="">Any</option>
+        @for (option of subTypeOptions(); track option.id) {
+          <option [value]="option.id">{{ option.displayName }}</option>
+        }
+      </select>
+    </div>
+
+    <div class="sk-field">
+      <label for="dirVerification">Verification</label>
+      <select
+        id="dirVerification"
+        class="sk-select"
+        [value]="verification() ?? ''"
+        (change)="pick($any($event.target).value, verification.set)"
+      >
+        <option value="">Any</option>
+        <option [value]="VerificationStatus.Active">Verified</option>
+        <option [value]="VerificationStatus.Pending">Under review</option>
+        <option [value]="VerificationStatus.NeedsApproval">Needs approval</option>
+        <option [value]="VerificationStatus.Rejected">Not approved</option>
+      </select>
+    </div>
+
+    <div class="sk-field">
+      <label for="dirAvailability">Availability</label>
+      <select
+        id="dirAvailability"
+        class="sk-select"
+        [value]="availability() ?? ''"
+        (change)="pick($any($event.target).value, availability.set)"
+      >
+        <option value="">Any</option>
+        <option [value]="AvailabilityStatus.Active">Active</option>
+        <option [value]="AvailabilityStatus.Inactive">Inactive</option>
+        <option [value]="AvailabilityStatus.Suspended">Suspended</option>
+        <option [value]="AvailabilityStatus.Removed">Removed</option>
+      </select>
+    </div>
+
+    <div class="sk-field">
+      <label for="dirState">State</label>
+      <select
+        id="dirState"
+        class="sk-select"
+        [value]="state() ?? ''"
+        (change)="onStateChange($any($event.target).value)"
+      >
+        <option value="">Any</option>
+        @for (option of states; track option.name) {
+          <option [value]="option.name">{{ option.name }}</option>
+        }
+      </select>
+    </div>
+
+    <div class="sk-field">
+      <label for="dirDistrict">District</label>
+      <select
+        id="dirDistrict"
+        class="sk-select"
+        [value]="district() ?? ''"
+        [disabled]="districts().length === 0"
+        (change)="pickText($any($event.target).value, district.set)"
+      >
+        <option value="">{{ districts().length === 0 ? 'Pick a state first' : 'Any' }}</option>
+        @for (option of districts(); track option) {
+          <option [value]="option">{{ option }}</option>
+        }
+      </select>
+    </div>
+  </div>
+
+  <div class="count">
+    <p class="sk-meta">
+      <strong class="sk-figure">{{ total() }}</strong>
+      {{ total() === 1 ? 'profile' : 'profiles' }}
+      @if (activeFilters() > 0) {
+        matching your filters
+      }
+    </p>
+    <span class="sk-spacer"></span>
+    @if (totalPages() > 1) {
+      <div class="pager">
+        <button
+          type="button"
+          class="sk-btn sk-btn--secondary sk-btn--sm"
+          [disabled]="page() === 1"
+          (click)="changePage(-1)"
+        >
+          <span class="material-symbols-rounded" aria-hidden="true">chevron_left</span>
+          <span class="sk-sr-only">Previous page</span>
+        </button>
+        <span class="sk-figure pager__label">{{ page() }} / {{ totalPages() }}</span>
+        <button
+          type="button"
+          class="sk-btn sk-btn--secondary sk-btn--sm"
+          [disabled]="page() === totalPages()"
+          (click)="changePage(1)"
+        >
+          <span class="material-symbols-rounded" aria-hidden="true">chevron_right</span>
+          <span class="sk-sr-only">Next page</span>
+        </button>
+      </div>
+    }
+  </div>
+
+  @if (loading()) {
+    <sk-loading [count]="8" label="Loading the directory" />
+  } @else if (rows().length === 0) {
+    <sk-empty-state
+      icon="person_search"
+      title="No profiles match those filters"
+      message="Try clearing the region or status filters."
+    >
+      <button type="button" class="sk-btn sk-btn--secondary" (click)="clear()">
+        Clear filters
+      </button>
+    </sk-empty-state>
+  } @else {
+    <div class="sk-table-wrap dir-table">
+      <table class="sk-table">
+        <caption class="sk-sr-only">Registered profiles</caption>
+        <thead>
+          <tr>
+            <th scope="col">
+              <button type="button" class="sort" (click)="sort('name')">
+                Profile
+                <span class="material-symbols-rounded" aria-hidden="true">swap_vert</span>
+              </button>
+            </th>
+            <th scope="col">Type</th>
+            <th scope="col">Deals in</th>
+            <th scope="col" class="sk-num">Capacity</th>
+            <th scope="col">Region</th>
+            <th scope="col">
+              <button type="button" class="sort" (click)="sort('status')">
+                Verification
+                <span class="material-symbols-rounded" aria-hidden="true">swap_vert</span>
+              </button>
+            </th>
+            <th scope="col">Availability</th>
+            <th scope="col">Trust</th>
+            <th scope="col">
+              <button type="button" class="sort" (click)="sort('createdAt')">
+                Joined
+                <span class="material-symbols-rounded" aria-hidden="true">swap_vert</span>
+              </button>
+            </th>
+            <th scope="col"><span class="sk-sr-only">Actions</span></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (profile of rows(); track profile.id) {
+            <tr>
+              <td>
+                <a class="who" [routerLink]="['/admin/directory', profile.id]">
+                  <span class="who__name">{{ profile.name }}</span>
+                  @if (profile.gstinMasked) {
+                    <span class="who__gstin">{{ profile.gstinMasked }}</span>
+                  } @else {
+                    <span class="who__gstin who__gstin--none">No GSTIN</span>
+                  }
+                </a>
+              </td>
+              <td>
+                <span class="chip">{{ roleMeta[profile.role].label }}</span>
+                <span class="sub">{{ sizeLabel[profile.businessSize] }}</span>
+              </td>
+              <td>{{ profile.subType?.displayName ?? categoryMeta[profile.category].label }}</td>
+              <td class="sk-num">{{ capacity(profile) }}</td>
+              <td>
+                <span class="loc">{{ profile.district }}</span>
+                <span class="sub">{{ profile.state }}</span>
+              </td>
+              <td>
+                <sk-status-pill [verification]="profile.verificationStatus" />
+                @if (profile.gstinVerified) {
+                  <sk-verification-badge [verified]="true" size="sm" />
+                }
+              </td>
+              <td>
+                <sk-status-pill [availability]="profile.availabilityStatus" />
+                @if (profile.suspensionEndDate) {
+                  <span class="sub">until {{ formatDate(profile.suspensionEndDate) }}</span>
+                }
+              </td>
+              <td>
+                <sk-star-rating
+                  [value]="profile.trust.averageStars ?? 0"
+                  [count]="profile.trust.ratingsReceived"
+                />
+                <span class="sub">
+                  {{ profile.trust.completedDeals }} settled · {{ profile.trust.haltedDeals }} halted
+                </span>
+              </td>
+              <td>{{ formatDate(profile.createdAt) }}</td>
+              <td>
+                <a
+                  class="sk-btn sk-btn--secondary sk-btn--sm"
+                  [routerLink]="['/admin/directory', profile.id]"
+                >
+                  Manage
+                </a>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+
+    <ul class="dir-cards">
+      @for (profile of rows(); track profile.id) {
+        <li class="dir-card">
+          <a class="dir-card__head" [routerLink]="['/admin/directory', profile.id]">
+            <span class="dir-card__name">{{ profile.name }}</span>
+            <span class="chip">{{ roleMeta[profile.role].label }}</span>
+          </a>
+          <div class="dir-card__pills">
+            <sk-status-pill [verification]="profile.verificationStatus" />
+            <sk-status-pill [availability]="profile.availabilityStatus" />
+          </div>
+          <dl class="dir-card__facts">
+            <div>
+              <dt>Region</dt>
+              <dd>{{ profile.district }}, {{ profile.state }}</dd>
+            </div>
+            <div>
+              <dt>Deals in</dt>
+              <dd>{{ profile.subType?.displayName ?? categoryMeta[profile.category].label }}</dd>
+            </div>
+            <div>
+              <dt>Capacity</dt>
+              <dd class="sk-figure">{{ capacity(profile) }}</dd>
+            </div>
+            <div>
+              <dt>Joined</dt>
+              <dd>{{ formatDate(profile.createdAt) }}</dd>
+            </div>
+          </dl>
+          <a
+            class="sk-btn sk-btn--secondary sk-btn--sm"
+            [routerLink]="['/admin/directory', profile.id]"
+          >
+            Manage profile
+          </a>
+        </li>
+      }
+    </ul>
+  }
+</section>

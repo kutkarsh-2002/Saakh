@@ -1,0 +1,128 @@
+.content {
+  display: grid;
+  gap: var(--sk-space-4);
+  max-width: 36rem;
+}
+
+.intro {
+  margin: 0;
+  font-size: 0.9375rem;
+  color: var(--sk-ink);
+}
+
+.form {
+  display: grid;
+  gap: var(--sk-space-4);
+}
+
+// -----------------------------------------------------------------------------
+// Category picker
+// -----------------------------------------------------------------------------
+
+.cats {
+  border: 0;
+  margin: 0;
+  padding: 0;
+}
+
+.cats legend {
+  padding: 0 0 var(--sk-space-2);
+}
+
+.cats__options {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--sk-space-2);
+}
+
+.cat {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sk-space-2);
+  min-height: var(--sk-touch);
+  padding: var(--sk-space-2) var(--sk-space-3);
+  border: 1px solid var(--sk-line-strong);
+  border-radius: var(--sk-radius);
+  background: var(--sk-surface);
+  font-size: 0.9375rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.cat:hover {
+  background: var(--sk-surface-sunken);
+}
+
+.cat--on {
+  border-color: var(--sk-brand);
+  border-width: 2px;
+  padding: calc(var(--sk-space-2) - 1px) calc(var(--sk-space-3) - 1px);
+  background: var(--sk-brand-soft);
+  color: var(--sk-brand-soft-ink);
+}
+
+.cat input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.cat:has(input:focus-visible) {
+  outline: 3px solid var(--sk-accent);
+  outline-offset: 2px;
+}
+
+.cat .material-symbols-rounded {
+  font-size: 1.25rem;
+}
+
+// -----------------------------------------------------------------------------
+// Preview and disclaimer
+// -----------------------------------------------------------------------------
+
+// Echoing the figure back formatted catches a misplaced zero before the ticket
+// becomes a permanent record.
+.preview {
+  display: flex;
+  align-items: center;
+  gap: var(--sk-space-2);
+  margin: 0;
+  padding: var(--sk-space-2) var(--sk-space-3);
+  border-radius: var(--sk-radius);
+  background: var(--sk-accent-soft);
+  color: var(--sk-accent-soft-ink);
+  font-size: 0.9375rem;
+}
+
+.preview .material-symbols-rounded {
+  font-size: 1.125rem;
+  flex: none;
+}
+
+.disclaimer {
+  display: flex;
+  gap: var(--sk-space-2);
+  margin: 0;
+  padding: var(--sk-space-3);
+  border-radius: var(--sk-radius);
+  background: var(--sk-surface-sunken);
+  box-shadow: inset 0 0 0 1px var(--sk-line-strong);
+  font-size: 0.8125rem;
+  line-height: 1.55;
+  color: var(--sk-ink-muted);
+}
+
+.disclaimer .material-symbols-rounded {
+  font-size: 1.125rem;
+  flex: none;
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--sk-space-2);
+  padding: var(--sk-space-4) !important;
+  flex-wrap: wrap;
+}

@@ -1,0 +1,217 @@
+.tabs {
+  display: flex;
+  gap: var(--sk-space-1);
+  margin-bottom: var(--sk-space-4);
+  padding: var(--sk-space-1);
+  background: var(--sk-surface-sunken);
+  border-radius: var(--sk-radius);
+  width: fit-content;
+  max-width: 100%;
+}
+
+.tabs__tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 40px;
+  padding: 0 var(--sk-space-4);
+  border: 0;
+  border-radius: var(--sk-radius-sm);
+  background: transparent;
+  color: var(--sk-ink-muted);
+  font-family: var(--sk-font-ui);
+  font-size: 0.9375rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.tabs__tab:hover {
+  color: var(--sk-ink);
+}
+
+.tabs__tab--on {
+  background: var(--sk-surface);
+  color: var(--sk-ink-strong);
+  box-shadow: var(--sk-shadow-sm);
+}
+
+.tabs__tab .material-symbols-rounded {
+  font-size: 1.125rem;
+}
+
+.tabs__badge,
+.tabs__count {
+  display: grid;
+  place-items: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 5px;
+  border-radius: var(--sk-radius-pill);
+  font-size: 0.6875rem;
+  font-weight: 700;
+}
+
+// An inbound interest waiting on an answer is the only count that is urgent.
+.tabs__badge {
+  background: var(--sk-accent);
+  color: var(--sk-ink-inverse);
+}
+
+.tabs__count {
+  background: var(--sk-surface-sunken);
+  color: var(--sk-ink-muted);
+}
+
+.tabs__tab--on .tabs__count {
+  background: var(--sk-canvas);
+}
+
+// -----------------------------------------------------------------------------
+// List
+// -----------------------------------------------------------------------------
+
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--sk-space-3);
+}
+
+.item {
+  display: grid;
+  gap: var(--sk-space-3);
+  padding: var(--sk-space-4);
+}
+
+@media (min-width: 820px) {
+  .item {
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: start;
+    gap: var(--sk-space-5);
+  }
+}
+
+.item__main {
+  display: grid;
+  gap: var(--sk-space-2);
+  min-width: 0;
+}
+
+.item__head {
+  display: flex;
+  align-items: center;
+  gap: var(--sk-space-2);
+  flex-wrap: wrap;
+}
+
+.item__name {
+  font-family: var(--sk-font-display);
+  font-size: 1.1875rem;
+  font-weight: 600;
+  color: var(--sk-ink-strong);
+  text-decoration: none;
+}
+
+.item__name:hover {
+  text-decoration: underline;
+}
+
+.item__meta {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin: 0;
+  flex-wrap: wrap;
+}
+
+.item__meta .material-symbols-rounded {
+  font-size: 1rem;
+}
+
+.item__note {
+  display: flex;
+  gap: var(--sk-space-2);
+  margin: 0;
+  padding: var(--sk-space-3);
+  background: var(--sk-surface-sunken);
+  border-radius: var(--sk-radius);
+  // A left rule marks this as the counterparty's own words rather than ours.
+  box-shadow: inset 3px 0 0 0 var(--sk-accent);
+  font-size: 0.9375rem;
+  line-height: 1.55;
+  color: var(--sk-ink);
+}
+
+.item__note .material-symbols-rounded {
+  font-size: 1.125rem;
+  flex: none;
+  color: var(--sk-accent);
+}
+
+.item__when {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin: 0;
+  flex-wrap: wrap;
+}
+
+// -----------------------------------------------------------------------------
+// Actions
+// -----------------------------------------------------------------------------
+
+.item__actions {
+  display: grid;
+  gap: var(--sk-space-2);
+  align-content: start;
+}
+
+@media (min-width: 820px) {
+  .item__actions {
+    min-width: 13rem;
+    justify-items: stretch;
+  }
+}
+
+.item__waiting,
+.item__declined {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  padding: var(--sk-space-2) var(--sk-space-3);
+  border-radius: var(--sk-radius);
+  background: var(--sk-surface-sunken);
+  color: var(--sk-ink-muted);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  line-height: 1.45;
+}
+
+.item__waiting .material-symbols-rounded,
+.item__declined .material-symbols-rounded {
+  font-size: 1.125rem;
+  flex: none;
+}
+
+.item__hint {
+  margin: 0;
+  text-align: center;
+  font-size: 0.75rem;
+  color: var(--sk-ink-subtle);
+}
+
+.unread {
+  display: grid;
+  place-items: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 5px;
+  border-radius: var(--sk-radius-pill);
+  background: var(--sk-accent);
+  color: var(--sk-ink-inverse);
+  font-size: 0.6875rem;
+  font-weight: 700;
+}

@@ -1,0 +1,494 @@
+.crumbs {
+  margin-bottom: var(--sk-space-3);
+}
+
+.crumbs a {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 36px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.crumbs a:hover {
+  text-decoration: underline;
+}
+
+.crumbs .material-symbols-rounded {
+  font-size: 1.125rem;
+}
+
+// -----------------------------------------------------------------------------
+// Header and state strip
+// -----------------------------------------------------------------------------
+
+.head {
+  display: grid;
+  gap: var(--sk-space-4);
+}
+
+.head__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sk-space-3);
+  flex-wrap: wrap;
+}
+
+.head__ref {
+  margin: 0;
+  font-size: 1.75rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.stages {
+  list-style: none;
+  display: flex;
+  align-items: flex-start;
+  margin: 0;
+  padding: 0;
+  overflow-x: auto;
+}
+
+.stages__step {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  gap: var(--sk-space-1);
+  flex: 1 1 0;
+  min-width: 5.5rem;
+  padding: 0 var(--sk-space-1);
+}
+
+// The connecting rule runs behind the dots and stops before the last stage.
+.stages__step:not(:last-child)::after {
+  content: '';
+  position: absolute;
+  top: 15px;
+  left: 50%;
+  width: 100%;
+  height: 2px;
+  background: var(--sk-line);
+}
+
+.stages__step--done:not(:last-child)::after {
+  background: var(--sk-completed);
+}
+
+.stages__dot {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--sk-surface);
+  box-shadow: inset 0 0 0 2px var(--sk-line-strong);
+  color: var(--sk-ink-subtle);
+}
+
+.stages__dot .material-symbols-rounded {
+  font-size: 1.125rem;
+}
+
+.stages__step--done .stages__dot {
+  background: var(--sk-completed);
+  box-shadow: none;
+  color: var(--sk-ink-inverse);
+}
+
+.stages__step--on .stages__dot {
+  background: var(--sk-accent);
+  box-shadow: 0 0 0 4px var(--sk-accent-soft);
+  color: var(--sk-ink-inverse);
+}
+
+// The current stage spins only while the deal is actually in Progress.
+.stages__step--on:nth-child(2) .stages__dot .material-symbols-rounded {
+  animation: stage-spin 1.8s linear infinite;
+}
+
+@keyframes stage-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stages__step--on:nth-child(2) .stages__dot .material-symbols-rounded {
+    animation: none;
+  }
+}
+
+// A halted deal greys the main line, because that path is not the live one.
+.stages__step--dead:not(.stages__step--halted) .stages__dot,
+.stages__step--dead:not(.stages__step--halted) .stages__label {
+  opacity: 0.45;
+}
+
+.stages__step--halted .stages__dot {
+  background: var(--sk-halted);
+  box-shadow: 0 0 0 4px var(--sk-halted-soft);
+  color: var(--sk-ink-inverse);
+  opacity: 1;
+}
+
+.stages__step--halted .stages__label {
+  color: var(--sk-halted);
+  font-weight: 700;
+  opacity: 1;
+}
+
+.stages__label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--sk-ink-muted);
+  text-align: center;
+}
+
+.stages__step--on .stages__label {
+  color: var(--sk-ink-strong);
+  font-weight: 700;
+}
+
+.halted-note,
+.frozen-note {
+  display: flex;
+  gap: var(--sk-space-2);
+  margin: 0;
+  padding: var(--sk-space-3);
+  border-radius: var(--sk-radius);
+  font-size: 0.875rem;
+  line-height: 1.6;
+}
+
+.halted-note {
+  background: var(--sk-halted-soft);
+  color: var(--sk-halted-soft-ink);
+  box-shadow: inset 0 0 0 1.5px var(--sk-halted);
+}
+
+.frozen-note {
+  background: var(--sk-open-soft);
+  color: var(--sk-open-soft-ink);
+  box-shadow: inset 0 0 0 1.5px var(--sk-open);
+}
+
+.halted-note .material-symbols-rounded,
+.frozen-note .material-symbols-rounded {
+  font-size: 1.375rem;
+  flex: none;
+}
+
+// -----------------------------------------------------------------------------
+// Layout
+// -----------------------------------------------------------------------------
+
+.layout {
+  display: grid;
+  gap: var(--sk-space-4);
+  margin-top: var(--sk-space-4);
+}
+
+@media (min-width: 1100px) {
+  .layout {
+    grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
+    align-items: start;
+  }
+}
+
+.col {
+  display: grid;
+  gap: var(--sk-space-4);
+  align-content: start;
+  min-width: 0;
+}
+
+// -----------------------------------------------------------------------------
+// Terms
+// -----------------------------------------------------------------------------
+
+.terms__intro {
+  margin: var(--sk-space-1) 0 var(--sk-space-4);
+  max-width: 60ch;
+}
+
+.terms__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 11rem), 1fr));
+  gap: var(--sk-space-3);
+  margin: 0;
+}
+
+.terms__item {
+  padding: var(--sk-space-3);
+  background: var(--sk-surface-sunken);
+  border-radius: var(--sk-radius);
+}
+
+.terms__item--wide {
+  grid-column: 1 / -1;
+}
+
+// The headline figure is what both parties check first, so it gets the brand
+// fill and a larger size than anything else in the block.
+.terms__item--hero {
+  background: var(--sk-brand);
+  color: var(--sk-ink-inverse);
+}
+
+.terms__item--hero dt {
+  color: #b9d4c8;
+}
+
+.terms__hero {
+  font-size: 1.625rem !important;
+  line-height: 1.15;
+  color: var(--sk-ink-inverse) !important;
+}
+
+.terms__item--warn {
+  background: var(--sk-halted-soft);
+  box-shadow: inset 0 0 0 1px var(--sk-halted);
+}
+
+.terms__grid dt {
+  font-size: 0.625rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--sk-ink-subtle);
+}
+
+.terms__grid dd {
+  margin: 2px 0 0;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--sk-ink-strong);
+}
+
+.terms__sub {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--sk-accent-strong);
+}
+
+.terms__item--warn .terms__sub {
+  color: var(--sk-halted);
+}
+
+.terms__desc {
+  font-weight: 400 !important;
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+
+.cat {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.cat .material-symbols-rounded {
+  font-size: 1.125rem;
+  color: var(--sk-ink-muted);
+}
+
+.terms__disclaimer {
+  display: flex;
+  align-items: center;
+  gap: var(--sk-space-2);
+  margin: var(--sk-space-4) 0 0;
+  font-size: 0.75rem;
+  color: var(--sk-ink-subtle);
+  line-height: 1.5;
+}
+
+.terms__disclaimer .material-symbols-rounded {
+  font-size: 1rem;
+  flex: none;
+}
+
+// -----------------------------------------------------------------------------
+// Chat
+// -----------------------------------------------------------------------------
+
+.chat {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.chat__head {
+  padding: var(--sk-space-4);
+  border-bottom: 1px solid var(--sk-line);
+}
+
+.chat__head h2 {
+  margin: 0;
+}
+
+.chat__head .sk-meta {
+  margin: 2px 0 0;
+  max-width: 54ch;
+}
+
+// -----------------------------------------------------------------------------
+// Actions
+// -----------------------------------------------------------------------------
+
+.actions {
+  display: grid;
+  gap: var(--sk-space-3);
+}
+
+.actions h2 {
+  margin: 0;
+}
+
+.actions__context {
+  margin: 0;
+  font-size: 0.875rem;
+  line-height: 1.55;
+  color: var(--sk-ink-muted);
+}
+
+.actions__context strong {
+  color: var(--sk-ink-strong);
+}
+
+.actions__warn {
+  margin: 0;
+  font-size: 0.75rem;
+  line-height: 1.5;
+  color: var(--sk-ink-subtle);
+}
+
+.actions__waiting,
+.actions__done {
+  display: flex;
+  align-items: center;
+  gap: var(--sk-space-2);
+  margin: 0;
+  padding: var(--sk-space-3);
+  border-radius: var(--sk-radius);
+  font-size: 0.875rem;
+  font-weight: 500;
+  line-height: 1.5;
+}
+
+.actions__waiting {
+  background: var(--sk-pending-soft);
+  color: var(--sk-pending-soft-ink);
+}
+
+.actions__done {
+  background: var(--sk-completed-soft);
+  color: var(--sk-completed-soft-ink);
+  font-weight: 600;
+}
+
+.actions__waiting .material-symbols-rounded,
+.actions__done .material-symbols-rounded {
+  font-size: 1.25rem;
+  flex: none;
+}
+
+// Settlement needs both sides, so both are listed rather than only the user's.
+.confirm {
+  display: grid;
+  gap: var(--sk-space-1);
+  padding: var(--sk-space-3);
+  background: var(--sk-surface-sunken);
+  border-radius: var(--sk-radius);
+}
+
+.confirm__row {
+  display: flex;
+  align-items: center;
+  gap: var(--sk-space-2);
+  font-size: 0.875rem;
+  color: var(--sk-ink-muted);
+}
+
+.confirm__row--on {
+  color: var(--sk-completed);
+  font-weight: 600;
+}
+
+.confirm__row .material-symbols-rounded {
+  font-size: 1.125rem;
+}
+
+.confirm__row--on .material-symbols-rounded {
+  font-variation-settings: 'FILL' 1;
+}
+
+// -----------------------------------------------------------------------------
+// Ratings and counterparty
+// -----------------------------------------------------------------------------
+
+.rating {
+  display: grid;
+  gap: var(--sk-space-1);
+  justify-items: start;
+}
+
+.rating .sk-meta {
+  margin: 0;
+}
+
+.rating__note {
+  margin: var(--sk-space-1) 0;
+  padding: var(--sk-space-2) var(--sk-space-3);
+  background: var(--sk-surface-sunken);
+  border-radius: var(--sk-radius);
+  box-shadow: inset 3px 0 0 0 var(--sk-star);
+  font-size: 0.9375rem;
+  line-height: 1.55;
+}
+
+.rating__none {
+  margin: 0;
+  font-size: 0.875rem;
+  font-style: italic;
+  color: var(--sk-ink-subtle);
+}
+
+.party__head {
+  display: flex;
+  align-items: center;
+  gap: var(--sk-space-2);
+  flex-wrap: wrap;
+}
+
+.party__name {
+  font-family: var(--sk-font-display);
+  font-size: 1.1875rem;
+  font-weight: 600;
+  color: var(--sk-ink-strong);
+  text-decoration: none;
+}
+
+.party__name:hover {
+  text-decoration: underline;
+}
+
+.party__meta {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin: var(--sk-space-1) 0 0;
+  flex-wrap: wrap;
+}
+
+.timeline__intro {
+  margin: var(--sk-space-1) 0 var(--sk-space-4);
+  max-width: 54ch;
+}

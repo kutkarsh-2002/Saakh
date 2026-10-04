@@ -1,0 +1,176 @@
+@use '@angular/material' as mat;
+
+// =============================================================================
+// Angular Material, bound to the Saakh tokens
+// =============================================================================
+// Material supplies the behaviour (dialogs, menus, autocomplete, tabs, tables),
+// and this file makes it wear the product's own palette and type rather than the
+// framework's defaults. Material's system variables are re-pointed at the
+// tokens in _tokens.scss, so there is still exactly one source of truth.
+// =============================================================================
+
+html {
+  @include mat.theme(
+    (
+      color: (
+        primary: mat.$green-palette,
+        tertiary: mat.$orange-palette,
+      ),
+      typography: (
+        plain-family: (
+          'IBM Plex Sans',
+          'Segoe UI',
+          system-ui,
+          sans-serif,
+        ),
+        brand-family: (
+          'Fraunces',
+          Georgia,
+          serif,
+        ),
+      ),
+      density: 0,
+    )
+  );
+}
+
+:root {
+  // Surfaces and ink
+  --mat-sys-surface: var(--sk-surface);
+  --mat-sys-surface-container: var(--sk-surface);
+  --mat-sys-surface-container-low: var(--sk-surface);
+  --mat-sys-surface-container-lowest: var(--sk-surface-raised);
+  --mat-sys-surface-container-high: var(--sk-surface-sunken);
+  --mat-sys-surface-container-highest: var(--sk-surface-sunken);
+  --mat-sys-background: var(--sk-canvas);
+  --mat-sys-on-surface: var(--sk-ink);
+  --mat-sys-on-surface-variant: var(--sk-ink-muted);
+  --mat-sys-on-background: var(--sk-ink);
+  --mat-sys-outline: var(--sk-line-strong);
+  --mat-sys-outline-variant: var(--sk-line);
+
+  // Brand
+  --mat-sys-primary: var(--sk-brand);
+  --mat-sys-on-primary: var(--sk-ink-inverse);
+  --mat-sys-primary-container: var(--sk-brand-soft);
+  --mat-sys-on-primary-container: var(--sk-brand-soft-ink);
+
+  // Second accent: ratings and in-progress states
+  --mat-sys-tertiary: var(--sk-accent);
+  --mat-sys-on-tertiary: var(--sk-ink-inverse);
+  --mat-sys-tertiary-container: var(--sk-accent-soft);
+  --mat-sys-on-tertiary-container: var(--sk-accent-soft-ink);
+
+  --mat-sys-error: var(--sk-halted);
+  --mat-sys-on-error: var(--sk-ink-inverse);
+  --mat-sys-error-container: var(--sk-halted-soft);
+  --mat-sys-on-error-container: var(--sk-halted-soft-ink);
+
+  --mat-sys-corner-medium: var(--sk-radius);
+  --mat-sys-corner-large: var(--sk-radius-lg);
+}
+
+// Dialogs carry decisions in this product (raise a ticket, halt a deal, reject
+// a verification), so they get the raised surface and a display-face title.
+.mat-mdc-dialog-surface {
+  background: var(--sk-surface) !important;
+  border: 1px solid var(--sk-line);
+  box-shadow: var(--sk-shadow-lg) !important;
+}
+
+.mat-mdc-dialog-title {
+  font-family: var(--sk-font-display) !important;
+  font-weight: 600 !important;
+  color: var(--sk-ink-strong) !important;
+  letter-spacing: -0.01em;
+}
+
+.mat-mdc-dialog-container {
+  --mdc-dialog-container-color: var(--sk-surface);
+}
+
+// Form fields: Material's outlined field, sized to the 44px touch target.
+.mat-mdc-form-field {
+  width: 100%;
+}
+
+.mat-mdc-text-field-wrapper {
+  background: var(--sk-surface-raised) !important;
+}
+
+.mat-mdc-form-field-subscript-wrapper {
+  font-size: 0.8125rem;
+}
+
+// Menus and option lists
+.mat-mdc-menu-panel,
+.mat-mdc-autocomplete-panel,
+.mat-mdc-select-panel {
+  background: var(--sk-surface) !important;
+  border: 1px solid var(--sk-line);
+  box-shadow: var(--sk-shadow-lg) !important;
+}
+
+.mat-mdc-menu-item {
+  min-height: var(--sk-touch) !important;
+}
+
+// Tabs: the primary navigation on both dashboards.
+.mat-mdc-tab-header {
+  border-bottom: 1px solid var(--sk-line);
+}
+
+.mat-mdc-tab .mdc-tab__text-label {
+  font-family: var(--sk-font-ui);
+  font-weight: 600;
+  letter-spacing: 0;
+}
+
+// Snackbars report the outcome of an action, so they are legible, not subtle.
+.mat-mdc-snack-bar-container {
+  --mdc-snackbar-container-color: var(--sk-ink-strong);
+  --mdc-snackbar-supporting-text-color: var(--sk-ink-inverse);
+  --mat-snack-bar-button-color: #ffd9a3;
+}
+
+.mat-mdc-snack-bar-container.sk-snack-error {
+  --mdc-snackbar-container-color: var(--sk-halted);
+}
+
+.mat-mdc-snack-bar-container .mdc-snackbar__label {
+  font-family: var(--sk-font-ui);
+  font-size: 0.9375rem;
+}
+
+// Tooltips carry the full text of truncated descriptions, so they need to be
+// readable rather than decorative.
+.mat-mdc-tooltip .mdc-tooltip__surface {
+  background: var(--sk-ink-strong) !important;
+  color: var(--sk-ink-inverse) !important;
+  font-family: var(--sk-font-ui);
+  font-size: 0.8125rem !important;
+  line-height: 1.5;
+  max-width: 28rem !important;
+  padding: var(--sk-space-2) var(--sk-space-3) !important;
+}
+
+// Checkboxes and radios used by the multi-select filters.
+.mat-mdc-checkbox,
+.mat-mdc-radio-button {
+  --mdc-checkbox-selected-icon-color: var(--sk-brand);
+  --mdc-checkbox-selected-focus-icon-color: var(--sk-brand);
+  --mdc-checkbox-selected-hover-icon-color: var(--sk-brand-hover);
+  --mdc-radio-selected-icon-color: var(--sk-brand);
+}
+
+.mat-mdc-progress-spinner {
+  --mdc-circular-progress-active-indicator-color: var(--sk-accent);
+}
+
+.mat-mdc-slide-toggle {
+  --mdc-switch-selected-track-color: var(--sk-brand-soft);
+  --mdc-switch-selected-handle-color: var(--sk-brand);
+  --mdc-switch-selected-hover-handle-color: var(--sk-brand-hover);
+  --mdc-switch-selected-focus-handle-color: var(--sk-brand);
+  --mdc-switch-selected-pressed-handle-color: var(--sk-brand-strong);
+}

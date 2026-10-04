@@ -1,0 +1,519 @@
+<sk-auth-layout
+  title="Create your profile"
+  subtitle="Three short steps. Your trust record starts building from your first settled deal."
+>
+  <!-- Progress is stated in words as well as shape, because this user base
+       includes people who will not read a bare numbered circle. -->
+  <ol class="steps" aria-label="Signup progress">
+    @for (item of [1, 2, 3]; track item) {
+      <li
+        class="steps__step"
+        [class.steps__step--done]="step() > item"
+        [class.steps__step--current]="step() === item"
+        [attr.aria-current]="step() === item ? 'step' : null"
+      >
+        <span class="steps__badge">
+          @if (step() > item) {
+            <span class="material-symbols-rounded" aria-hidden="true">check</span>
+          } @else {
+            <span class="sk-figure">{{ item }}</span>
+          }
+        </span>
+        <span class="steps__label">
+          {{ item === 1 ? 'Who you are' : item === 2 ? 'Verify' : 'What you deal in' }}
+        </span>
+      </li>
+    }
+  </ol>
+
+  @if (error()) {
+    <p class="alert" role="alert">
+      <span class="material-symbols-rounded" aria-hidden="true">error</span>
+      <span>{{ error() }}</span>
+    </p>
+  }
+
+  <!-- ===== Step 1 ========================================================= -->
+  @if (step() === 1) {
+    <form class="sk-card sk-card-pad panel" [formGroup]="identity" (ngSubmit)="next()">
+      <fieldset class="roles">
+        <legend class="roles__legend">Which side are you on?</legend>
+        <p class="roles__hint">
+          One login is one side of the market. If your business does both, create a second profile
+          later — that keeps each trust record unambiguous.
+        </p>
+
+        <div class="roles__options">
+          @for (role of [ProfileRole.Lender, ProfileRole.Seeker]; track role) {
+            <label class="role" [class.role--on]="selectedRole() === role">
+              <input
+                type="radio"
+                name="role"
+                [value]="role"
+                [checked]="selectedRole() === role"
+                (change)="pickRole(role)"
+              />
+              <span class="material-symbols-rounded role__icon" aria-hidden="true">{{
+                roleMeta[role].icon
+              }}</span>
+              <span class="role__body">
+                <span class="role__name">{{ roleMeta[role].label }}</span>
+                <span class="role__desc">
+                  {{
+                    role === ProfileRole.Lender
+                      ? 'You provide money or raw material on credit terms.'
+                      : 'You need money or raw material on credit terms.'
+                  }}
+                </span>
+                <span class="role__sees">You will discover {{ roleMeta[role].discovers }}</span>
+              </span>
+              @if (selectedRole() === role) {
+                <span class="material-symbols-rounded role__check" aria-hidden="true">check_circle</span>
+              }
+            </label>
+          }
+        </div>
+      </fieldset>
+
+      <div class="sk-field">
+        <label for="fullName">Business or personal name</label>
+        <input
+          id="fullName"
+          type="text"
+          class="sk-input"
+          formControlName="fullName"
+          autocomplete="organization"
+          placeholder="e.g. Deshmukh Traders"
+          [class.is-invalid]="invalidIn('identity', 'fullName')"
+        />
+        <p class="sk-hint">This is the name counterparties will see in search.</p>
+        @if (invalidIn('identity', 'fullName')) {
+          <p class="sk-error">
+            <span class="material-symbols-rounded" aria-hidden="true">error</span>
+            Enter the name you trade under.
+          </p>
+        }
+      </div>
+
+      <div class="sk-field">
+        <label for="isBusiness">Are you a registered business?</label>
+        <select id="isBusiness" class="sk-select" formControlName="isBusiness">
+          <option [value]="false">No — I trade as an individual</option>
+          <option [value]="true">Yes — registered business</option>
+        </select>
+      </div>
+
+      @if (identity.controls.isBusiness.value) {
+        <div class="sk-field">
+          <label for="businessSize">Business size</label>
+          <select id="businessSize" class="sk-select" formControlName="businessSize">
+            <option [value]="BusinessSize.Small">Small</option>
+            <option [value]="BusinessSize.Medium">Medium</option>
+            <option [value]="BusinessSize.Large">Large</option>
+          </select>
+        </div>
+      }
+
+      <div class="sk-field">
+        <label for="email">Email address</label>
+        <input
+          id="email"
+          type="email"
+          class="sk-input"
+          formControlName="email"
+          autocomplete="email"
+          inputmode="email"
+          [class.is-invalid]="invalidIn('identity', 'email')"
+        />
+        <p class="sk-hint">We send approval and deal notices here.</p>
+        @if (invalidIn('identity', 'email')) {
+          <p class="sk-error">
+            <span class="material-symbols-rounded" aria-hidden="true">error</span>
+            Enter a valid email address.
+          </p>
+        }
+      </div>
+
+      <div class="sk-field">
+        <label for="password">Choose a password</label>
+        <input
+          id="password"
+          type="password"
+          class="sk-input"
+          formControlName="password"
+          autocomplete="new-password"
+          [class.is-invalid]="invalidIn('identity', 'password')"
+        />
+        <p class="sk-hint">At least 8 characters.</p>
+        @if (invalidIn('identity', 'password')) {
+          <p class="sk-error">
+            <span class="material-symbols-rounded" aria-hidden="true">error</span>
+            Use at least 8 characters.
+          </p>
+        }
+      </div>
+
+      <div class="actions">
+        <button type="submit" class="sk-btn sk-btn--primary">
+          Continue
+          <span class="material-symbols-rounded" aria-hidden="true">arrow_forward</span>
+        </button>
+      </div>
+
+      <p class="switch">
+        Already have an account?
+        <a routerLink="/sign-in">Sign in</a>
+      </p>
+    </form>
+  }
+
+  <!-- ===== Step 2 ========================================================= -->
+  @if (step() === 2) {
+    <div class="panel-stack" [formGroup]="verification">
+      <!-- Phone OTP: mandatory on both verification paths. -->
+      <section class="sk-card sk-card-pad panel">
+        <header class="panel__head">
+          <h2>Verify your mobile number</h2>
+          <p class="sk-meta">Required for every account, on both verification paths.</p>
+        </header>
+
+        <div class="sk-field">
+          <label for="phone">Mobile number</label>
+          <div class="inline">
+            <span class="inline__prefix">+91</span>
+            <input
+              id="phone"
+              type="tel"
+              class="sk-input"
+              formControlName="phone"
+              inputmode="numeric"
+              maxlength="10"
+              autocomplete="tel-national"
+              placeholder="10 digits"
+              [class.is-invalid]="invalidIn('verification', 'phone')"
+              [class.is-valid]="otpVerified()"
+            />
+            <button
+              type="button"
+              class="sk-btn sk-btn--secondary"
+              (click)="sendOtp()"
+              [disabled]="otpSending() || otpVerified() || verification.controls.phone.invalid"
+            >
+              {{ otpSent() ? 'Resend code' : 'Send code' }}
+            </button>
+          </div>
+          @if (invalidIn('verification', 'phone')) {
+            <p class="sk-error">
+              <span class="material-symbols-rounded" aria-hidden="true">error</span>
+              Enter a 10-digit mobile number.
+            </p>
+          }
+        </div>
+
+        @if (otpSent() && !otpVerified()) {
+          <div class="sk-field">
+            <label for="otpCode">6-digit code</label>
+            <div class="inline">
+              <input
+                id="otpCode"
+                type="text"
+                class="sk-input otp"
+                formControlName="otpCode"
+                inputmode="numeric"
+                maxlength="6"
+                autocomplete="one-time-code"
+                [class.is-invalid]="invalidIn('verification', 'otpCode')"
+              />
+              <button type="button" class="sk-btn sk-btn--primary" (click)="verifyOtp()">
+                Verify
+              </button>
+            </div>
+            @if (otpMessage()) {
+              <p class="sk-hint">{{ otpMessage() }}</p>
+            }
+            @if (devCode()) {
+              <!-- There is no SMS gateway in the free stack, so outside
+                   Production the code is returned and filled in for you. -->
+              <p class="dev-note">
+                <span class="material-symbols-rounded" aria-hidden="true">science</span>
+                Development build: no SMS is sent, so the code
+                <strong>{{ devCode() }}</strong> has been filled in for you.
+              </p>
+            }
+          </div>
+        }
+
+        @if (otpVerified()) {
+          <p class="ok" role="status">
+            <span class="material-symbols-rounded" aria-hidden="true">check_circle</span>
+            Mobile number verified.
+          </p>
+        }
+      </section>
+
+      <!-- GSTIN: optional, but it decides which path the account takes. -->
+      <section class="sk-card sk-card-pad panel">
+        <header class="panel__head">
+          <h2>GSTIN <span class="optional">optional</span></h2>
+          <p class="sk-meta">
+            A GSTIN is checked against the government registry while you type it. If it checks out,
+            your account is open immediately.
+          </p>
+        </header>
+
+        <div class="sk-field">
+          <label for="gstin">GSTIN</label>
+          <div class="inline">
+            <input
+              id="gstin"
+              type="text"
+              class="sk-input gstin"
+              formControlName="gstin"
+              maxlength="15"
+              autocapitalize="characters"
+              spellcheck="false"
+              placeholder="27AAPFU0939F1ZV"
+              [class.is-invalid]="gstinEntered && !gstinFormatOk"
+              [class.is-valid]="gstinResult()?.isValid === true"
+            />
+            <button
+              type="button"
+              class="sk-btn sk-btn--secondary"
+              (click)="checkGstin()"
+              [disabled]="!gstinFormatOk || gstinChecking()"
+            >
+              @if (gstinChecking()) {
+                <span class="material-symbols-rounded spin" aria-hidden="true">progress_activity</span>
+                Checking
+              } @else {
+                Verify
+              }
+            </button>
+          </div>
+
+          @if (gstinEntered && !gstinFormatOk) {
+            <p class="sk-error">
+              <span class="material-symbols-rounded" aria-hidden="true">error</span>
+              A GSTIN is 15 characters: 2 digits, 5 letters, 4 digits, a letter, a character, Z,
+              then one more.
+            </p>
+          }
+
+          @if (gstinResult(); as result) {
+            @if (result.isValid) {
+              <p class="ok" role="status">
+                <span class="material-symbols-rounded" aria-hidden="true">verified</span>
+                <span>
+                  Verified against the registry.
+                  @if (result.legalName) {
+                    Registered as <strong>{{ result.legalName }}</strong>.
+                  }
+                </span>
+              </p>
+            } @else {
+              <p class="sk-error">
+                <span class="material-symbols-rounded" aria-hidden="true">error</span>
+                {{ result.message }}
+              </p>
+            }
+          }
+        </div>
+
+        @if (gstinEntered) {
+          <button type="button" class="sk-btn sk-btn--quiet sk-btn--sm" (click)="clearGstin()">
+            Continue without a GSTIN instead
+          </button>
+        }
+
+        <!-- Which path this account is on, stated before they commit to it. -->
+        <aside class="path" [class.path--review]="path() === 'review'">
+          <span class="material-symbols-rounded" aria-hidden="true">
+            {{ path() === 'gstin' ? 'bolt' : 'how_to_reg' }}
+          </span>
+          <span>
+            @if (path() === 'gstin') {
+              <strong>Your account will be open straight away.</strong>
+              A verified GSTIN confirms who you are, so nothing is locked.
+            } @else {
+              <strong>Your account will start with everything except Profile locked.</strong>
+              Without a GSTIN, an administrator reviews proof documents you upload — an ID, a shop
+              licence, or a recent utility bill. You can sign up now and submit them from your
+              Profile.
+            }
+          </span>
+        </aside>
+      </section>
+
+      <div class="actions actions--split">
+        <button type="button" class="sk-btn sk-btn--secondary" (click)="back()">
+          <span class="material-symbols-rounded" aria-hidden="true">arrow_back</span>
+          Back
+        </button>
+        <button type="button" class="sk-btn sk-btn--primary" (click)="next()">
+          Continue
+          <span class="material-symbols-rounded" aria-hidden="true">arrow_forward</span>
+        </button>
+      </div>
+    </div>
+  }
+
+  <!-- ===== Step 3 ========================================================= -->
+  @if (step() === 3) {
+    <form class="sk-card sk-card-pad panel" [formGroup]="trade" (ngSubmit)="submit()">
+      <header class="panel__head">
+        <h2>
+          What you {{ selectedRole() === ProfileRole.Lender ? 'provide' : 'need' }}
+        </h2>
+        <p class="sk-meta">
+          This is what the ranking matches on, so a counterparty nearby who deals in the same thing
+          sees you first.
+        </p>
+      </header>
+
+      <div class="sk-grid-2">
+        <div class="sk-field">
+          <label for="state">State</label>
+          <select
+            id="state"
+            class="sk-select"
+            formControlName="state"
+            [class.is-invalid]="invalidIn('trade', 'state')"
+          >
+            <option value="">Select a state</option>
+            @for (state of states; track state.name) {
+              <option [value]="state.name">{{ state.name }}</option>
+            }
+          </select>
+          @if (invalidIn('trade', 'state')) {
+            <p class="sk-error">
+              <span class="material-symbols-rounded" aria-hidden="true">error</span>
+              Pick your state.
+            </p>
+          }
+        </div>
+
+        <div class="sk-field">
+          <label for="district">District</label>
+          <select
+            id="district"
+            class="sk-select"
+            formControlName="district"
+            [disabled]="districts().length === 0"
+            [class.is-invalid]="invalidIn('trade', 'district')"
+          >
+            <option value="">
+              {{ districts().length === 0 ? 'Pick a state first' : 'Select a district' }}
+            </option>
+            @for (district of districts(); track district) {
+              <option [value]="district">{{ district }}</option>
+            }
+          </select>
+          @if (invalidIn('trade', 'district')) {
+            <p class="sk-error">
+              <span class="material-symbols-rounded" aria-hidden="true">error</span>
+              Pick your district.
+            </p>
+          }
+        </div>
+      </div>
+
+      <div class="sk-grid-2">
+        <div class="sk-field">
+          <label for="category">Category</label>
+          <select id="category" class="sk-select" formControlName="category">
+            <option [value]="DealCategory.Money">Money</option>
+            <option [value]="DealCategory.RawMaterial">Raw material</option>
+          </select>
+        </div>
+
+        <div class="sk-field">
+          <label for="subType">
+            {{ trade.controls.category.value === DealCategory.Money ? 'Type of credit' : 'Material' }}
+          </label>
+          <select
+            id="subType"
+            class="sk-select"
+            formControlName="categorySubTypeId"
+            [class.is-invalid]="invalidIn('trade', 'categorySubTypeId')"
+          >
+            @for (option of subTypes(); track option.id) {
+              <option [value]="option.id">{{ option.displayName }}</option>
+            }
+          </select>
+        </div>
+      </div>
+
+      <fieldset class="capacity">
+        <legend class="capacity__legend">
+          {{ selectedRole() === ProfileRole.Lender ? 'Supply capacity' : 'Receiving capacity' }}
+          <span class="capacity__unit">in {{ capacityUnit() }}</span>
+        </legend>
+        <p class="sk-hint">
+          The range you typically work in. Counterparties filter on this, so a realistic range
+          brings you better matches than an optimistic one.
+        </p>
+
+        <div class="sk-grid-2">
+          <div class="sk-field">
+            <label for="capacityMin">From</label>
+            <input
+              id="capacityMin"
+              type="number"
+              class="sk-input"
+              formControlName="capacityMin"
+              min="0"
+              inputmode="numeric"
+            />
+          </div>
+          <div class="sk-field">
+            <label for="capacityMax">Up to</label>
+            <input
+              id="capacityMax"
+              type="number"
+              class="sk-input"
+              formControlName="capacityMax"
+              min="0"
+              inputmode="numeric"
+            />
+          </div>
+        </div>
+      </fieldset>
+
+      @if (selectedRole() === ProfileRole.Seeker) {
+        <div class="sk-field">
+          <label for="ownTrade">What trade are you in?</label>
+          <input
+            id="ownTrade"
+            type="text"
+            class="sk-input"
+            formControlName="ownTradeDescription"
+            placeholder="e.g. Kirana store in Pune, open six years"
+            [class.is-invalid]="invalidIn('trade', 'ownTradeDescription')"
+          />
+          <p class="sk-hint">Context for a Lender sizing you up. Keep it short and concrete.</p>
+          @if (invalidIn('trade', 'ownTradeDescription')) {
+            <p class="sk-error">
+              <span class="material-symbols-rounded" aria-hidden="true">error</span>
+              Tell counterparties what you trade in.
+            </p>
+          }
+        </div>
+      }
+
+      <div class="actions actions--split">
+        <button type="button" class="sk-btn sk-btn--secondary" (click)="back()">
+          <span class="material-symbols-rounded" aria-hidden="true">arrow_back</span>
+          Back
+        </button>
+        <button type="submit" class="sk-btn sk-btn--primary" [disabled]="submitting()">
+          @if (submitting()) {
+            <span class="material-symbols-rounded spin" aria-hidden="true">progress_activity</span>
+            Creating your profile…
+          } @else {
+            Create my profile
+          }
+        </button>
+      </div>
+    </form>
+  }
+</sk-auth-layout>

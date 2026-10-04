@@ -1,0 +1,488 @@
+// =============================================================================
+// Base element styles and the shared component primitives
+// =============================================================================
+// Buttons, fields, cards, tables and chips are defined once here (and in the
+// shared Angular components) so no screen styles them ad hoc.
+// =============================================================================
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  // 100% rather than a fixed px size, so a vendor who has enlarged their system
+  // font actually gets larger text.
+  font-size: 100%;
+  -webkit-text-size-adjust: 100%;
+}
+
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+}
+
+body {
+  background: var(--sk-canvas);
+  color: var(--sk-ink);
+  font-family: var(--sk-font-ui);
+  font-size: 0.9375rem;
+  line-height: 1.55;
+  // Figures stay in tabular form everywhere by default: amounts, counts and
+  // dates line up column to column without per-table opt-in.
+  font-variant-numeric: tabular-nums;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+h3,
+h4 {
+  font-family: var(--sk-font-display);
+  font-weight: 600;
+  font-optical-sizing: auto;
+  color: var(--sk-ink-strong);
+  letter-spacing: -0.01em;
+  margin: 0;
+}
+
+h1 {
+  font-size: clamp(1.5rem, 1.2rem + 1.4vw, 2rem);
+  line-height: 1.2;
+}
+
+h2 {
+  font-size: clamp(1.25rem, 1.1rem + 0.7vw, 1.5rem);
+  line-height: 1.25;
+}
+
+h3 {
+  font-size: 1.0625rem;
+  line-height: 1.35;
+}
+
+p {
+  margin: 0 0 var(--sk-space-3);
+}
+
+a {
+  color: var(--sk-brand);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 2px;
+}
+
+a:hover {
+  color: var(--sk-brand-hover);
+}
+
+:focus-visible {
+  // One visible focus ring for the whole app, thick enough to find outdoors.
+  outline: 3px solid var(--sk-accent);
+  outline-offset: 2px;
+  border-radius: var(--sk-radius-sm);
+}
+
+// -----------------------------------------------------------------------------
+// Typographic helpers
+// -----------------------------------------------------------------------------
+
+.sk-eyebrow {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--sk-ink-subtle);
+}
+
+.sk-lede {
+  font-size: 1rem;
+  color: var(--sk-ink-muted);
+  max-width: 62ch;
+}
+
+.sk-meta {
+  font-size: 0.8125rem;
+  color: var(--sk-ink-muted);
+}
+
+.sk-figure {
+  font-family: var(--sk-font-ui);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+
+.sk-truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+// Screen-reader-only text, used to carry status meaning that sighted users get
+// from the icon shape.
+.sk-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+// -----------------------------------------------------------------------------
+// Layout
+// -----------------------------------------------------------------------------
+
+.sk-page {
+  max-width: var(--sk-content-max);
+  margin: 0 auto;
+  padding: var(--sk-space-5) var(--sk-space-4) var(--sk-space-8);
+}
+
+@media (min-width: 900px) {
+  .sk-page {
+    padding: var(--sk-space-6) var(--sk-space-6) var(--sk-space-8);
+  }
+}
+
+.sk-stack {
+  display: grid;
+  gap: var(--sk-space-5);
+}
+
+.sk-stack-sm {
+  display: grid;
+  gap: var(--sk-space-3);
+}
+
+.sk-row {
+  display: flex;
+  align-items: center;
+  gap: var(--sk-space-3);
+  flex-wrap: wrap;
+}
+
+.sk-row-tight {
+  display: flex;
+  align-items: center;
+  gap: var(--sk-space-2);
+  flex-wrap: wrap;
+}
+
+.sk-spacer {
+  flex: 1 1 auto;
+}
+
+// -----------------------------------------------------------------------------
+// Card
+// -----------------------------------------------------------------------------
+
+.sk-card {
+  background: var(--sk-surface);
+  border: 1px solid var(--sk-line);
+  border-radius: var(--sk-radius-lg);
+  box-shadow: var(--sk-shadow-sm);
+}
+
+.sk-card-pad {
+  padding: var(--sk-space-4);
+}
+
+@media (min-width: 900px) {
+  .sk-card-pad {
+    padding: var(--sk-space-5);
+  }
+}
+
+.sk-card-head {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sk-space-3);
+  padding: var(--sk-space-4);
+  border-bottom: 1px solid var(--sk-line-hairline);
+  flex-wrap: wrap;
+}
+
+.sk-card-head h2,
+.sk-card-head h3 {
+  margin: 0;
+}
+
+// -----------------------------------------------------------------------------
+// Buttons
+// -----------------------------------------------------------------------------
+// Always a real <button> or <a href>. Four variants, defined once.
+
+.sk-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sk-space-2);
+  min-height: var(--sk-touch);
+  padding: 0 var(--sk-space-4);
+  border-radius: var(--sk-radius);
+  border: 1px solid transparent;
+  font-family: var(--sk-font-ui);
+  font-size: 0.9375rem;
+  font-weight: 600;
+  line-height: 1;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background-color 120ms ease, border-color 120ms ease, color 120ms ease;
+}
+
+.sk-btn:disabled,
+.sk-btn[aria-disabled='true'] {
+  cursor: not-allowed;
+  // Disabled is signalled by lower contrast plus a flat fill, and every
+  // disabled control in this app also explains itself in adjacent text.
+  background: var(--sk-surface-sunken);
+  border-color: var(--sk-line);
+  color: var(--sk-ink-subtle);
+}
+
+.sk-btn--primary {
+  background: var(--sk-brand);
+  color: var(--sk-ink-inverse);
+}
+
+.sk-btn--primary:hover:not(:disabled) {
+  background: var(--sk-brand-hover);
+}
+
+.sk-btn--secondary {
+  background: var(--sk-surface);
+  border-color: var(--sk-line-strong);
+  color: var(--sk-ink);
+}
+
+.sk-btn--secondary:hover:not(:disabled) {
+  background: var(--sk-surface-sunken);
+  border-color: var(--sk-ink-subtle);
+}
+
+.sk-btn--destructive {
+  background: var(--sk-surface);
+  border-color: var(--sk-halted);
+  color: var(--sk-halted);
+}
+
+.sk-btn--destructive:hover:not(:disabled) {
+  background: var(--sk-halted-soft);
+}
+
+.sk-btn--quiet {
+  background: transparent;
+  color: var(--sk-brand);
+  padding: 0 var(--sk-space-2);
+}
+
+.sk-btn--quiet:hover:not(:disabled) {
+  background: var(--sk-brand-soft);
+}
+
+.sk-btn--sm {
+  min-height: 36px;
+  font-size: 0.875rem;
+  padding: 0 var(--sk-space-3);
+}
+
+.sk-btn--block {
+  width: 100%;
+}
+
+.sk-btn .material-symbols-rounded {
+  font-size: 1.125rem;
+}
+
+// -----------------------------------------------------------------------------
+// Forms
+// -----------------------------------------------------------------------------
+
+.sk-field {
+  display: grid;
+  gap: var(--sk-space-1);
+}
+
+.sk-field > label {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--sk-ink);
+}
+
+.sk-field .sk-hint {
+  font-size: 0.8125rem;
+  color: var(--sk-ink-muted);
+}
+
+.sk-field .sk-error {
+  display: flex;
+  align-items: center;
+  gap: var(--sk-space-1);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--sk-halted);
+}
+
+.sk-input,
+.sk-select,
+.sk-textarea {
+  width: 100%;
+  min-height: var(--sk-touch);
+  padding: var(--sk-space-2) var(--sk-space-3);
+  background: var(--sk-surface-raised);
+  border: 1px solid var(--sk-line-strong);
+  border-radius: var(--sk-radius);
+  font-family: var(--sk-font-ui);
+  font-size: 1rem;
+  color: var(--sk-ink);
+}
+
+.sk-textarea {
+  min-height: 96px;
+  padding-top: var(--sk-space-3);
+  resize: vertical;
+}
+
+.sk-input:hover,
+.sk-select:hover,
+.sk-textarea:hover {
+  border-color: var(--sk-ink-subtle);
+}
+
+.sk-input:focus,
+.sk-select:focus,
+.sk-textarea:focus {
+  outline: none;
+  border-color: var(--sk-brand);
+  box-shadow: 0 0 0 3px var(--sk-brand-ring);
+}
+
+// Valid and invalid are both stated, never left to colour alone: the field gets
+// a thicker border and the message below it carries an icon.
+.sk-input.is-invalid,
+.sk-select.is-invalid,
+.sk-textarea.is-invalid {
+  border-color: var(--sk-halted);
+  border-width: 2px;
+}
+
+.sk-input.is-valid,
+.sk-select.is-valid {
+  border-color: var(--sk-completed);
+}
+
+.sk-input::placeholder,
+.sk-textarea::placeholder {
+  color: var(--sk-ink-subtle);
+}
+
+// -----------------------------------------------------------------------------
+// Tables
+// -----------------------------------------------------------------------------
+// Back-office density: tight rows, strong header, numbers right-aligned.
+
+.sk-table-wrap {
+  overflow-x: auto;
+  border-radius: var(--sk-radius-lg);
+}
+
+.sk-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+.sk-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--sk-surface-sunken);
+  text-align: left;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--sk-ink-muted);
+  padding: var(--sk-space-3);
+  white-space: nowrap;
+  border-bottom: 1px solid var(--sk-line-strong);
+}
+
+.sk-table tbody td {
+  padding: var(--sk-space-3);
+  border-bottom: 1px solid var(--sk-line-hairline);
+  vertical-align: middle;
+}
+
+.sk-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.sk-table tbody tr:hover {
+  background: var(--sk-surface-sunken);
+}
+
+.sk-table .sk-num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.sk-table .sk-cell-strong {
+  font-weight: 600;
+  color: var(--sk-ink-strong);
+}
+
+// A description cell is capped and ellipsised, with the full text on the title
+// attribute, per the spec's truncate-with-tooltip rule.
+.sk-table .sk-cell-clamp {
+  max-width: 24rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+// -----------------------------------------------------------------------------
+// Utility
+// -----------------------------------------------------------------------------
+
+.sk-divider {
+  height: 1px;
+  background: var(--sk-line-hairline);
+  border: 0;
+  margin: var(--sk-space-4) 0;
+}
+
+.sk-grid-2 {
+  display: grid;
+  gap: var(--sk-space-4);
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 860px) {
+  .sk-grid-2 {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.sk-grid-auto {
+  display: grid;
+  gap: var(--sk-space-4);
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 230px), 1fr));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

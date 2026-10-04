@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="Saakh">
+  <rect width="32" height="32" rx="7" fill="#15543f" />
+  <!-- A seal: the mark a trusted trading record carries. -->
+  <path
+    d="M16 5.5l9 4v6.2c0 5.4-3.6 9.9-9 11.3-5.4-1.4-9-5.9-9-11.3V9.5l9-4z"
+    fill="#faf6ef"
+  />
+  <path
+    d="M11.4 16.2l3.2 3.3 6-6.6"
+    fill="none"
+    stroke="#15543f"
+    stroke-width="2.4"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+</svg>
