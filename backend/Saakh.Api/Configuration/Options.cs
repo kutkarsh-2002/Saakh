@@ -185,3 +185,31 @@ public class SettlementOptions
     /// </summary>
     public bool AutoCloseOverdue { get; set; } = true;
 }
+
+public class JobsOptions
+{
+    public const string Section = "Jobs";
+
+    /// <summary>
+    /// Run the Hangfire server and its recurring sweeps in this instance. On by
+    /// default, which is what the compose stack and a normal deployment want.
+    ///
+    /// Turn it off where the API scales to zero or the database is metered by
+    /// time-online rather than by query. Hangfire polls its storage on a fixed
+    /// interval whether or not there is work, so an idle instance still keeps the
+    /// database permanently awake — on Azure SQL's free serverless offer that
+    /// polling alone consumes the whole monthly vCore-second allowance in a
+    /// couple of days and the database is then paused for the rest of the month.
+    /// With this off, nothing is enqueued and the sweeps below never run, so the
+    /// overdue-settlement closure and the GSTIN retry have to be triggered by
+    /// hand or by an external scheduler.
+    /// </summary>
+    public bool Enabled { get; set; } = true;
+
+    /// <summary>
+    /// How often the Hangfire server asks storage for queued work. Only read when
+    /// <see cref="Enabled"/> is set. Every poll is a query, so this is the dial
+    /// that decides how much a mostly-idle deployment costs.
+    /// </summary>
+    public int QueuePollIntervalSeconds { get; set; } = 15;
+}

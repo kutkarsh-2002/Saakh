@@ -18,6 +18,11 @@ services:
   web:
     build: ./frontend # Angular build, served by nginx
     ports: ['80:80']
+    environment:
+      # nginx proxies /api and /hubs here. The service name and its own port work
+      # on a compose network; hosts that put internal apps behind ingress on 80
+      # (Azure Container Apps) need just the name. See frontend/nginx.conf.template.
+      - API_UPSTREAM=${API_UPSTREAM:-api:5000}
     depends_on:
       api:
         condition: service_started
@@ -62,6 +67,14 @@ services:
       # than one instance runs, and apply the migrate bundle once instead — two
       # instances migrating the same database concurrently is not safe.
       - Database__MigrateOnStartup=${MIGRATE_ON_STARTUP:-true}
+      # Hangfire polls its storage every QueuePollIntervalSeconds whether or not
+      # there is work, so an idle API still keeps the database awake. That is free
+      # against a container, and expensive against a database metered by
+      # time-online — on Azure SQL's free offer the poll alone spends the monthly
+      # allowance in about two days. Off, the overdue-settlement closure, the
+      # suspension expiry and the GSTIN retry do not run. See deploy/azure/README.md.
+      - Jobs__Enabled=${JOBS_ENABLED:-true}
+      - Jobs__QueuePollIntervalSeconds=${JOBS_POLL_SECONDS:-15}
       # The web container proxies the browser to the API on its own origin, so
       # this only matters when the API is called directly on port 5000.
       - Cors__Origins__0=${WEB_ORIGIN:-http://localhost}

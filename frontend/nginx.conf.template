@@ -1,9 +1,18 @@
-# nginx config for the Angular container.
+# nginx config template for the Angular container.
 #
 # The SPA and the API are served from one origin: nginx reverse-proxies /api and
-# /hubs to the api service inside the compose network. That keeps the browser on
-# a single origin, so there is no CORS preflight and no API hostname baked into
-# the JavaScript bundle at build time.
+# /hubs to the api service. That keeps the browser on a single origin, so there is
+# no CORS preflight and no API hostname baked into the JavaScript bundle at build
+# time.
+#
+# The upstream is a variable because it differs by host. Under compose it is the
+# service name and its own port, api:5000. Azure Container Apps instead puts every
+# internal app behind ingress on port 80 and routes to the target port itself, so
+# there it is just "api" — naming the container port there connects to nothing.
+#
+# The nginx image expands this file from /etc/nginx/templates into conf.d at
+# startup. NGINX_ENVSUBST_FILTER (set in the Dockerfile) restricts expansion to
+# API_UPSTREAM, so nginx's own $uri, $host and $scheme survive untouched.
 
 server {
     listen 80;
@@ -25,7 +34,7 @@ server {
     }
 
     location /api/ {
-        proxy_pass http://api:5000/api/;
+        proxy_pass http://${API_UPSTREAM}/api/;
         proxy_http_version 1.1;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
@@ -38,7 +47,7 @@ server {
 
     # SignalR needs the connection upgraded for WebSocket transport.
     location /hubs/ {
-        proxy_pass http://api:5000/hubs/;
+        proxy_pass http://${API_UPSTREAM}/hubs/;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection "upgrade";
@@ -52,12 +61,12 @@ server {
     }
 
     location /swagger/ {
-        proxy_pass http://api:5000/swagger/;
+        proxy_pass http://${API_UPSTREAM}/swagger/;
         proxy_set_header Host $host;
     }
 
     location /health {
-        proxy_pass http://api:5000/health;
+        proxy_pass http://${API_UPSTREAM}/health;
         proxy_set_header Host $host;
     }
 

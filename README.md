@@ -15,6 +15,7 @@ Saakh never holds, moves or guarantees money or material. It is a discovery, agr
 - [Running locally](#running-locally)
   - [With Docker Compose](#option-a--docker-compose-the-primary-path)
   - [Without Docker](#option-b--without-docker)
+- [Deploying](#deploying)
 - [Demo accounts](#demo-accounts)
 - [Walking through the product](#walking-through-the-product)
 - [Business rules worth knowing](#business-rules-worth-knowing)
@@ -151,6 +152,27 @@ dotnet run --seed --reset    # wipe the demo data and reload it
 The seeder writes profiles **directly to the database**, so it never calls the live GSTIN API and never spends a credit. Seeded GSTINs are plausible strings, not registry-verified numbers — profiles that came in through the real validation flow are the only ones that carry a genuine `GstinVerifiedAt`.
 
 What you get: 13 Lender and 18 Seeker profiles across the category taxonomy and ten Indian states, 28 deals spread over the last nine months (16 Completed, 4 Halted, 4 in Progress, 4 Open), ratings on most closed deals spanning 1–5 stars, three accounts deliberately left unverified so the Admin queue has real work, one Inactive profile, and two Admin accounts.
+
+---
+
+## Deploying
+
+`docker-compose.yml` is the deployment: the same file runs unchanged on a laptop
+or on any x86_64 Linux host with Docker. Put Caddy or nginx in front of the `web`
+service for TLS and that is a working public deployment.
+
+Two things to know before picking a host:
+
+- **SQL Server has no ARM64 Linux image**, and the migrate bundle is built
+  `--target-runtime linux-x64`. So an ARM host — including Oracle Cloud's
+  Always Free Ampere shapes, which `tech-stack.md` suggests — cannot run this
+  stack as written. It needs x86_64, or a swap to PostgreSQL (EF provider *and*
+  Hangfire storage).
+- **SQL Server wants 2 GB of RAM**, which rules out the 1 GB free micro shapes.
+
+For a free-tier public demo on Azure Container Apps + Azure SQL, including the
+free-grant arithmetic that forces scale-to-zero and disabled background jobs,
+see **[deploy/azure/README.md](deploy/azure/README.md)**.
 
 ---
 
@@ -303,6 +325,7 @@ Everything is environment-driven; `.env.example` lists every variable the compos
 | `Storage__EvidenceRoot` | `storage/evidence` | Mounted as a Docker volume |
 | `Database__MigrateOnStartup` | Development only | `true` in compose; set `false` for multi-replica and use the migrate bundle |
 | `Sms__Provider` | `Log` | `Fast2Sms`, `Msg91` or `Twilio` to actually send the code |
+| `Jobs__Enabled` | `true` | Runs the Hangfire sweeps. Off for a scale-to-zero or time-metered deployment — see [deploy/azure](deploy/azure/README.md) |
 | `Otp__ResendCooldownSeconds` | `60` | Enforced server-side, not just in the form |
 | `RateLimits__GstinPermitLimit` | `10` per 10 min | Protects the metered GSTIN quota |
 | `RateLimits__SignupPermitLimit` | `30` per 5 min | Blunts automated signup abuse |

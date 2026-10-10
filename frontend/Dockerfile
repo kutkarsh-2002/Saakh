@@ -14,7 +14,14 @@ RUN npm run build -- --configuration production
 
 FROM nginx:alpine AS runtime
 
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+# The config is a template, not a finished file: the upstream differs between
+# compose (api:5000) and Azure Container Apps (api, behind ingress on 80). The
+# nginx image expands /etc/nginx/templates/*.template into conf.d at startup.
+COPY nginx.conf.template /etc/nginx/templates/default.conf.template
+
+# Without this filter envsubst would also eat nginx's own $uri, $host and $scheme.
+ENV NGINX_ENVSUBST_FILTER=API_UPSTREAM
+ENV API_UPSTREAM=api:5000
 COPY --from=build /app/dist/frontend/browser /usr/share/nginx/html
 
 EXPOSE 80

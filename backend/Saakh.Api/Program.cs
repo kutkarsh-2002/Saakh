@@ -39,11 +39,13 @@ builder.Services.Configure<SmsOptions>(builder.Configuration.GetSection(SmsOptio
 builder.Services.Configure<SettlementOptions>(builder.Configuration.GetSection(SettlementOptions.Section));
 builder.Services.Configure<RateLimitOptions>(builder.Configuration.GetSection(RateLimitOptions.Section));
 builder.Services.Configure<DatabaseOptions>(builder.Configuration.GetSection(DatabaseOptions.Section));
+builder.Services.Configure<JobsOptions>(builder.Configuration.GetSection(JobsOptions.Section));
 
 var jwtOptions = builder.Configuration.GetSection(JwtOptions.Section).Get<JwtOptions>() ?? new JwtOptions();
 var gstinOptions = builder.Configuration.GetSection(GstinOptions.Section).Get<GstinOptions>() ?? new GstinOptions();
 var emailOptions = builder.Configuration.GetSection(EmailOptions.Section).Get<EmailOptions>() ?? new EmailOptions();
 var smsOptions = builder.Configuration.GetSection(SmsOptions.Section).Get<SmsOptions>() ?? new SmsOptions();
+var jobsOptions = builder.Configuration.GetSection(JobsOptions.Section).Get<JobsOptions>() ?? new JobsOptions();
 
 if (string.IsNullOrWhiteSpace(jwtOptions.Key))
 {
@@ -243,11 +245,11 @@ builder.Services.AddHangfire((provider, config) =>
         new SqlServerStorageOptions
         {
             PrepareSchemaIfNecessary = true,
-            QueuePollInterval = TimeSpan.FromSeconds(15)
+            QueuePollInterval = TimeSpan.FromSeconds(jobsOptions.QueuePollIntervalSeconds)
         });
 });
 
-if (!seedOnly)
+if (!seedOnly && jobsOptions.Enabled)
 {
     builder.Services.AddHangfireServer();
 }
@@ -449,13 +451,24 @@ if (!app.Environment.IsProduction())
     app.MapHangfireDashboard("/hangfire");
 }
 
-// Registered through IRecurringJobManager rather than the static RecurringJob
-// helper: the static one reads JobStorage.Current, which SQL Server storage does
-// not populate until the Hangfire server has started. Like the role seeding
-// above, this writes to the database, so it is tolerant of a schema that has not
-// been migrated yet rather than taking the whole API down with it.
-using (var jobScope = app.Services.CreateScope())
+// Hangfire polls its storage on a fixed interval whether or not there is work, so
+// registering the sweeps is what first wakes the database and what keeps it awake.
+// An instance that scales to zero, or one on a database metered by time-online
+// rather than by query, wants this off — see JobsOptions.Enabled.
+if (!jobsOptions.Enabled)
 {
+    app.Logger.LogWarning(
+        "Background jobs are disabled (Jobs:Enabled=false). The GSTIN retry sweep, the "
+        + "suspension expiry and the overdue-settlement closure will not run in this instance.");
+}
+else
+{
+    // Registered through IRecurringJobManager rather than the static RecurringJob
+    // helper: the static one reads JobStorage.Current, which SQL Server storage does
+    // not populate until the Hangfire server has started. Like the role seeding
+    // above, this writes to the database, so it is tolerant of a schema that has not
+    // been migrated yet rather than taking the whole API down with it.
+    using var jobScope = app.Services.CreateScope();
     var jobLogger = jobScope.ServiceProvider.GetRequiredService<ILoggerFactory>()
         .CreateLogger("Saakh.Startup");
 
