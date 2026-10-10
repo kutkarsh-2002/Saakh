@@ -56,6 +56,41 @@ rough edge a visitor could actually hit is the `99…` GSTIN path, which the roo
 README documents as the way to rehearse a registry timeout. Avoid that number
 when demoing, or see [Getting the jobs back](#getting-the-jobs-back).
 
+## If you have Azure credit, skip the compromises
+
+Everything above is shaped by the free grants. A student subscription removes
+that constraint: **Azure for Students** gives $100 of credit a year on a
+university email with **no credit card**, renewable while you are enrolled.
+That is far more than this demo burns, so there is no reason to live inside the
+free tiers if you qualify.
+
+Sign up at [azure.microsoft.com/free/students](https://azure.microsoft.com/free/students)
+with your institutional address and complete the academic verification. Then:
+
+```bash
+ALWAYS_ON=1 API_IMAGE=ghcr.io/YOURUSER/saakh-api:latest WEB_IMAGE=ghcr.io/YOURUSER/saakh-web:latest ./provision.sh
+```
+
+`ALWAYS_ON=1` changes three things:
+
+| | Free (default) | `ALWAYS_ON=1` |
+| --- | --- | --- |
+| Replicas | 0 — cold start of 30–60s | 1 each — always warm |
+| `Jobs__Enabled` | `false` — no sweeps | `true` — settlement closure and the rest run |
+| Free-grant exhaustion | `AutoPause` — database stops | `BillForUsage` — billed to your credit |
+
+This is the configuration that actually behaves like the product. Set a budget
+alert so a forgotten deployment cannot quietly eat the year's credit:
+
+```bash
+az consumption budget create --budget-name saakh-demo --amount 20   --time-grain Monthly --category Cost
+```
+
+When the credit expires the subscription stops rather than billing a card, so
+the failure mode is the demo going offline, not a surprise invoice.
+
+---
+
 ## Deploy
 
 Prerequisites: Docker, the `az` CLI, a GitHub account, and an Azure subscription.

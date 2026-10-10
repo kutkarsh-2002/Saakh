@@ -35,6 +35,24 @@ SQL_ADMIN="${SQL_ADMIN:-saakhadmin}"
 API_IMAGE="${API_IMAGE:?set API_IMAGE, e.g. ghcr.io/youruser/saakh-api:latest}"
 WEB_IMAGE="${WEB_IMAGE:?set WEB_IMAGE, e.g. ghcr.io/youruser/saakh-web:latest}"
 
+# ALWAYS_ON=1 drops the free-tier compromises: one replica of each app stays
+# warm (no cold start), the Hangfire sweeps run, and the database is told to bill
+# overage rather than pause when the monthly grant runs out. This costs money --
+# it is the right setting when there is Azure credit to spend (an Azure for
+# Students subscription carries $100/year, which covers a demo like this for
+# months) and the wrong one on a pay-as-you-go card nobody is watching.
+ALWAYS_ON="${ALWAYS_ON:-0}"
+
+if [[ "$ALWAYS_ON" == "1" ]]; then
+  MIN_REPLICAS=1
+  JOBS_ENABLED=true
+  EXHAUSTION_BEHAVIOR=BillForUsage
+else
+  MIN_REPLICAS=0
+  JOBS_ENABLED=false
+  EXHAUSTION_BEHAVIOR=AutoPause
+fi
+
 # Secrets. Generated if not supplied, and printed once at the end.
 SQL_PASSWORD="${SQL_PASSWORD:-$(openssl rand -base64 24 | tr -d '/+=' | cut -c1-20)Aa1!}"
 JWT_KEY="${JWT_KEY:-$(openssl rand -base64 48 | tr -d '\n')}"
@@ -92,7 +110,7 @@ if ! az sql db show -g "$RESOURCE_GROUP" -s "$SQL_SERVER" -n "$SQL_DB" -o none 2
     --edition GeneralPurpose --compute-model Serverless \
     --family Gen5 --capacity 2 --min-capacity 0.5 \
     --auto-pause-delay 60 \
-    --use-free-limit --free-limit-exhaustion-behavior AutoPause \
+    --use-free-limit --free-limit-exhaustion-behavior "$EXHAUSTION_BEHAVIOR" \
     --backup-storage-redundancy Local \
     -o none
 fi
@@ -123,7 +141,7 @@ az containerapp create \
   -g "$RESOURCE_GROUP" -n api --environment "$ENVIRONMENT" \
   --image "$API_IMAGE" \
   --ingress internal --target-port 5000 --transport auto \
-  --min-replicas 0 --max-replicas 1 \
+  --min-replicas "$MIN_REPLICAS" --max-replicas 1 \
   --cpu 0.5 --memory 1.0Gi \
   --secrets "conn=$CONNECTION_STRING" "jwt=$JWT_KEY" \
   --env-vars \
@@ -131,7 +149,7 @@ az containerapp create \
     "Jwt__Key=secretref:jwt" \
     "ASPNETCORE_ENVIRONMENT=Production" \
     "Database__MigrateOnStartup=true" \
-    "Jobs__Enabled=false" \
+    "Jobs__Enabled=$JOBS_ENABLED" \
     "Gstin__Provider=Mock" \
     "Email__Provider=Log" \
     "Sms__Provider=Log" \
@@ -145,7 +163,7 @@ az containerapp create \
   -g "$RESOURCE_GROUP" -n web --environment "$ENVIRONMENT" \
   --image "$WEB_IMAGE" \
   --ingress external --target-port 80 --transport auto \
-  --min-replicas 0 --max-replicas 1 \
+  --min-replicas "$MIN_REPLICAS" --max-replicas 1 \
   --cpu 0.25 --memory 0.5Gi \
   --env-vars "API_UPSTREAM=api" \
   -o none
@@ -178,10 +196,22 @@ The database is empty. Seed the demo accounts with:
 
 Then sign in at https://${WEB_FQDN} as lender1@saakh.demo / Saakh@2026
 
-First request after an idle period is slow: both apps scale to zero and the
-database auto-pauses, so expect 30-60s on a cold hit before anything renders.
+Mode: $(if [[ "$ALWAYS_ON" == "1" ]]; then echo "ALWAYS ON (billed against your credit)"; else echo "FREE (scale-to-zero)"; fi)
 
-Background jobs are OFF (Jobs__Enabled=false). The overdue-settlement closure,
-suspension expiry and GSTIN retry will not run. README.md explains why and what
-to do if you want them.
+$(if [[ "$ALWAYS_ON" == "1" ]]; then cat <<'ON'
+  One replica of each app stays warm, so there is no cold start, and the
+  background sweeps run. The database will bill overage against your
+  subscription rather than pausing when the monthly free grant runs out.
+
+  Watch the spend: az consumption usage list -- or set a budget alert.
+ON
+else cat <<'OFF'
+  Both apps scale to zero and the database auto-pauses, so the first request
+  after an idle period takes 30-60s before anything renders.
+
+  Background jobs are OFF. The overdue-settlement closure, the suspension
+  expiry and the GSTIN retry will not run -- see README.md for exactly what
+  that costs. Re-run with ALWAYS_ON=1 to turn all of this on.
+OFF
+fi)
 EOF
