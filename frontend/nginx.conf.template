@@ -6,19 +6,31 @@
 # time.
 #
 # The upstream is a variable because it differs by host. Under compose it is the
-# service name and its own port, api:5000. Azure Container Apps instead puts every
-# internal app behind ingress on port 80 and routes to the target port itself, so
-# there it is just "api" — naming the container port there connects to nothing.
+# service name and its own port, api:5000, and the Host header can stay whatever
+# the browser sent. Azure Container Apps differs twice over: nginx cannot resolve
+# the bare app name at startup, so the upstream must be the app's full internal
+# FQDN; and ingress routes by Host header, so forwarding the browser's host would
+# send the request straight back to the web app. API_HOST is therefore set to the
+# same FQDN there. It defaults to the literal text $host, which envsubst leaves in
+# the output for nginx to expand as usual.
+#
+# API_SCHEME is the third one: http on a compose network, https on Container Apps.
+# Express environments there refuse allowInsecure, so plain HTTP to the API is
+# answered with a 301 to HTTPS that the browser would be handed. For https
+# upstreams nginx must also send SNI, which ingress needs to pick the app.
 #
 # The nginx image expands this file from /etc/nginx/templates into conf.d at
 # startup. NGINX_ENVSUBST_FILTER (set in the Dockerfile) restricts expansion to
-# API_UPSTREAM, so nginx's own $uri, $host and $scheme survive untouched.
+# the API_* variables, so nginx's own $uri, $scheme and friends survive untouched.
 
 server {
     listen 80;
     server_name _;
     root /usr/share/nginx/html;
     index index.html;
+
+    # Only matters when API_SCHEME is https; ingress routes on the SNI name.
+    proxy_ssl_server_name on;
 
     # Vendors are often on patchy mobile data, so text assets are compressed.
     gzip on;
@@ -34,9 +46,9 @@ server {
     }
 
     location /api/ {
-        proxy_pass http://${API_UPSTREAM}/api/;
+        proxy_pass ${API_SCHEME}://${API_UPSTREAM}/api/;
         proxy_http_version 1.1;
-        proxy_set_header Host $host;
+        proxy_set_header Host ${API_HOST};
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
@@ -47,11 +59,11 @@ server {
 
     # SignalR needs the connection upgraded for WebSocket transport.
     location /hubs/ {
-        proxy_pass http://${API_UPSTREAM}/hubs/;
+        proxy_pass ${API_SCHEME}://${API_UPSTREAM}/hubs/;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection "upgrade";
-        proxy_set_header Host $host;
+        proxy_set_header Host ${API_HOST};
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         # A long read timeout keeps an idle hub connection from being dropped.
@@ -61,13 +73,13 @@ server {
     }
 
     location /swagger/ {
-        proxy_pass http://${API_UPSTREAM}/swagger/;
-        proxy_set_header Host $host;
+        proxy_pass ${API_SCHEME}://${API_UPSTREAM}/swagger/;
+        proxy_set_header Host ${API_HOST};
     }
 
     location /health {
-        proxy_pass http://${API_UPSTREAM}/health;
-        proxy_set_header Host $host;
+        proxy_pass ${API_SCHEME}://${API_UPSTREAM}/health;
+        proxy_set_header Host ${API_HOST};
     }
 
     # Every other path is an Angular route, so it falls through to the shell.

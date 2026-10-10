@@ -77,7 +77,7 @@ ALWAYS_ON=1 API_IMAGE=ghcr.io/YOURUSER/saakh-api:latest WEB_IMAGE=ghcr.io/YOURUS
 | --- | --- | --- |
 | Replicas | 0 — cold start of 30–60s | 1 each — always warm |
 | `Jobs__Enabled` | `false` — no sweeps | `true` — settlement closure and the rest run |
-| Free-grant exhaustion | `AutoPause` — database stops | `BillForUsage` — billed to your credit |
+| Free-grant exhaustion | `AutoPause` — database stops | `BillOverUsage` — billed to your credit |
 
 This is the configuration that actually behaves like the product. Set a budget
 alert so a forgotten deployment cannot quietly eat the year's credit:
@@ -136,7 +136,7 @@ the root [README](../../README.md#demo-accounts).
 | --- | --- | --- |
 | `Jobs__Enabled` | `false` | Hangfire polling would spend the SQL grant in ~2 days |
 | `Database__MigrateOnStartup` | `true` | One replica, so the API can safely bring its own schema up; no second step on a cold deploy |
-| `API_UPSTREAM` (web) | `api` | **Not** `api:5000`. Container Apps publishes internal apps on port 80 and routes to the target port itself; naming the container port connects to nothing |
+| `API_UPSTREAM` / `API_HOST` / `API_SCHEME` (web) | the api's full internal FQDN, same again, `https` | **Not** `api` and **not** `api:5000`. nginx cannot resolve the bare app name at startup, and ingress routes on the `Host` header, so nginx must send the FQDN as `Host` or the request loops back to the web app. Express environments reject `allowInsecure`, so plain HTTP gets a 301 to HTTPS; nginx therefore talks https and sends SNI |
 | `Otp__RevealCodeInResponse` | `true` | Demo stack. See the warning below |
 | `Gstin__Provider` | `Mock` | Keeps the demo off the metered registry quota and makes the failure paths reproducible |
 | `--min-replicas` | `0` | The free compute grant does not cover an always-on replica |

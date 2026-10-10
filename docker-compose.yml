@@ -20,9 +20,12 @@ services:
     ports: ['80:80']
     environment:
       # nginx proxies /api and /hubs here. The service name and its own port work
-      # on a compose network; hosts that put internal apps behind ingress on 80
-      # (Azure Container Apps) need just the name. See frontend/nginx.conf.template.
+      # on a compose network; hosts that route to internal apps by Host header
+      # (Azure Container Apps) need the full FQDN, with API_HOST to match. See
+      # frontend/nginx.conf.template.
       - API_UPSTREAM=${API_UPSTREAM:-api:5000}
+      - API_HOST=${API_HOST:-$$host}
+      - API_SCHEME=${API_SCHEME:-http}
     depends_on:
       api:
         condition: service_started

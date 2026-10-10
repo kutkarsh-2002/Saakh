@@ -46,7 +46,7 @@ ALWAYS_ON="${ALWAYS_ON:-0}"
 if [[ "$ALWAYS_ON" == "1" ]]; then
   MIN_REPLICAS=1
   JOBS_ENABLED=true
-  EXHAUSTION_BEHAVIOR=BillForUsage
+  EXHAUSTION_BEHAVIOR=BillOverUsage
 else
   MIN_REPLICAS=0
   JOBS_ENABLED=false
@@ -68,6 +68,9 @@ say "Subscription"
 az account show --query '{name:name, id:id}' -o tsv
 
 az extension add --name containerapp --upgrade --only-show-errors >/dev/null
+# A fresh subscription has registered none of these. Without Microsoft.Sql the
+# first "az sql" call fails with MissingSubscriptionRegistration.
+az provider register --namespace Microsoft.Sql --wait >/dev/null
 az provider register --namespace Microsoft.App --wait >/dev/null
 az provider register --namespace Microsoft.OperationalInsights --wait >/dev/null
 
@@ -128,9 +131,12 @@ fi
 
 # ---- API ---------------------------------------------------------------------
 # Internal ingress: only the web app talks to it, so it gets no public hostname.
-# Note the port asymmetry — the container listens on 5000, but Container Apps
-# publishes every internal app on 80 and routes to the target port. That is why
-# the web app's API_UPSTREAM below is "api" and not "api:5000".
+# The web app reaches it by its full internal FQDN, over HTTPS (ingress routes to
+# the target port itself, so 5000 is not named). Three traps each cost a failed
+# deploy: the bare name "api" does not resolve when nginx starts; ingress routes on
+# the Host header, so nginx must send the FQDN as Host or the request loops back to
+# the web app; and express environments reject allowInsecure, so plain HTTP is
+# answered with a 301 to HTTPS that the browser would be handed.
 #
 # min-replicas 0 lets the whole thing cost nothing while idle, at the price of a
 # cold start on the first request. The free monthly grant (180,000 vCPU-seconds)
@@ -158,14 +164,16 @@ az containerapp create \
 
 # ---- web ---------------------------------------------------------------------
 
-say "Container app: web"
+API_FQDN="$(az containerapp show -g "$RESOURCE_GROUP" -n api --query properties.configuration.ingress.fqdn -o tsv | tr -d '\r')"
+
+say "Container app: web (proxying to $API_FQDN)"
 az containerapp create \
   -g "$RESOURCE_GROUP" -n web --environment "$ENVIRONMENT" \
   --image "$WEB_IMAGE" \
   --ingress external --target-port 80 --transport auto \
   --min-replicas "$MIN_REPLICAS" --max-replicas 1 \
   --cpu 0.25 --memory 0.5Gi \
-  --env-vars "API_UPSTREAM=api" \
+  --env-vars "API_UPSTREAM=${API_FQDN}" "API_HOST=${API_FQDN}" "API_SCHEME=https" \
   -o none
 
 WEB_FQDN="$(az containerapp show -g "$RESOURCE_GROUP" -n web --query properties.configuration.ingress.fqdn -o tsv)"
