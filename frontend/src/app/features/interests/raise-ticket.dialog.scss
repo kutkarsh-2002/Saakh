@@ -126,3 +126,19 @@
   padding: var(--sk-space-4) !important;
   flex-wrap: wrap;
 }
+
+// The consequence of the settlement date, stated where it is being chosen.
+.intro--warn {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sk-space-2);
+  padding: var(--sk-space-3);
+  background: var(--sk-halted-soft);
+  color: var(--sk-halted-soft-ink);
+  border-radius: var(--sk-radius);
+}
+
+.intro--warn .material-symbols-rounded {
+  font-size: 1.125rem;
+  flex: none;
+}

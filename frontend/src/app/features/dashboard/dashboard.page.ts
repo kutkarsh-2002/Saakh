@@ -97,6 +97,14 @@ export class DashboardPage {
   readonly minRating = signal<number | null>(null);
   readonly sortBy = signal('match');
   readonly page = signal(1);
+
+  /**
+   * Bumped to re-run discovery when nothing the user chose has changed — after
+   * sending an interest, or when one moves elsewhere. Setting a filter signal to
+   * the value it already holds does not work: signals compare with Object.is and
+   * skip the notification, so the effect never re-runs.
+   */
+  private readonly discoveryReload = signal(0);
   readonly pageSize = 10;
   readonly filtersOpen = signal(false);
 
@@ -164,6 +172,9 @@ export class DashboardPage {
         pageSize: this.pageSize,
       };
 
+      // Read as a dependency so an explicit reload re-runs this effect.
+      this.discoveryReload();
+
       this.loadingOpportunities.set(true);
 
       this.api.opportunities(filters).subscribe({
@@ -185,7 +196,11 @@ export class DashboardPage {
       this.loadAnalytics();
     });
 
-    this.realtime.interest$.subscribe(() => this.page.set(this.page()));
+    this.realtime.interest$.subscribe(() => this.reloadOpportunities());
+  }
+
+  private reloadOpportunities(): void {
+    this.discoveryReload.update((value) => value + 1);
   }
 
   private loadAnalytics(): void {
@@ -290,12 +305,28 @@ export class DashboardPage {
         }
 
         this.api.sendInterest(row.profile.id, note).subscribe({
-          next: () => {
+          next: (interest) => {
             this.toast.success(
               `Interest sent to ${row.profile.name}. Chat opens once they accept.`,
             );
-            // Re-run discovery so the row reflects its new state.
-            this.page.set(this.page());
+
+            // Flip this row the moment the API confirms, rather than making the
+            // user watch an unchanged button until discovery comes back. The
+            // reload below still replaces it with the server's own version.
+            this.opportunities.update((rows) =>
+              rows.map((candidate) =>
+                candidate.profile.id === row.profile.id
+                  ? {
+                      ...candidate,
+                      interestStatus: interest.status,
+                      interestId: interest.id,
+                      interestWasSentByMe: true,
+                    }
+                  : candidate,
+              ),
+            );
+
+            this.reloadOpportunities();
           },
           error: (error: unknown) => this.toast.error(error),
         });

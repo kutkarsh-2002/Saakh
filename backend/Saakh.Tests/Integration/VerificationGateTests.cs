@@ -80,9 +80,6 @@ public class VerificationGateTests
         var client = new ApiClient(_factory.CreateClient());
         var phone = $"9{Random.Shared.NextInt64(100000000, 999999999)}";
 
-        var (_, otp) = await client.PostAsync<OtpRequestResultDto>(
-            "/api/auth/otp/request", new { phone });
-
         // The 00 prefix is the mock's unregistered-number rehearsal.
         var status = await client.PostStatusAsync("/api/auth/register", new
         {
@@ -91,7 +88,6 @@ public class VerificationGateTests
             fullName = "Bad GSTIN Business",
             role = ProfileRole.Lender,
             phone,
-            otpCode = otp!.DevCode,
             gstin = "00AAPFU0939F1ZV",
             isBusiness = true,
             businessSize = BusinessSize.Small,
@@ -104,36 +100,6 @@ public class VerificationGateTests
             capacityMax = 1000,
             capacityUnit = "kg",
             ownTradeDescription = (string?)null
-        });
-
-        status.Should().Be(HttpStatusCode.BadRequest);
-    }
-
-    [Fact]
-    public async Task Signup_requires_the_phone_otp()
-    {
-        var client = new ApiClient(_factory.CreateClient());
-
-        var status = await client.PostStatusAsync("/api/auth/register", new
-        {
-            email = $"{Guid.NewGuid():N}@saakh.test",
-            password = "Test@Password1",
-            fullName = "No OTP",
-            role = ProfileRole.Seeker,
-            phone = "9876543210",
-            otpCode = "000000",
-            gstin = (string?)null,
-            isBusiness = false,
-            businessSize = BusinessSize.Individual,
-            country = "India",
-            state = "Maharashtra",
-            district = "Pune",
-            category = DealCategory.RawMaterial,
-            categorySubTypeId = 10,
-            capacityMin = 100,
-            capacityMax = 1000,
-            capacityUnit = "kg",
-            ownTradeDescription = "Kirana store"
         });
 
         status.Should().Be(HttpStatusCode.BadRequest);

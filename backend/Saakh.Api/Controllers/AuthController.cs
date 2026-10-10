@@ -22,20 +22,6 @@ public class AuthController : ControllerBase
         _currentUser = currentUser;
     }
 
-    /// <summary>Issues a phone OTP. Mandatory at signup on both verification paths.</summary>
-    [HttpPost("otp/request")]
-    [EnableRateLimiting(RateLimitPolicies.Signup)]
-    public async Task<ActionResult<OtpRequestResultDto>> RequestOtp(OtpRequestDto dto, CancellationToken ct)
-        => Ok(await _auth.RequestOtpAsync(dto.Phone, ct));
-
-    [HttpPost("otp/verify")]
-    [EnableRateLimiting(RateLimitPolicies.Signup)]
-    public async Task<IActionResult> VerifyOtp(OtpVerifyDto dto, CancellationToken ct)
-    {
-        await _auth.VerifyOtpAsync(dto.Phone, dto.Code, ct);
-        return Ok(new { verified = true });
-    }
-
     /// <summary>
     /// Real-time GSTIN validation against the government registry, called from the signup
     /// form before submission. Rate-limited because every live call spends a credit.

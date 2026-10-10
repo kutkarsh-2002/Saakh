@@ -2,9 +2,23 @@ using Saakh.Api.Domain;
 
 namespace Saakh.Api.Dtos;
 
-public record OtpRequestDto(string Phone);
+/// <summary>
+/// The email is optional and is only used where the code travels by email instead of
+/// SMS. The signup form collects it a step earlier, so it is already in hand.
+/// </summary>
+public record OtpRequestDto(string Phone, string? Email = null);
 
-public record OtpRequestResultDto(bool Sent, string Message, string? DevCode);
+/// <summary>
+/// <paramref name="Sent"/> is false when a code was already sent moments ago and the
+/// existing one still stands; <paramref name="RetryAfterSeconds"/> is what the form
+/// counts down before offering Resend again.
+/// </summary>
+public record OtpRequestResultDto(
+    bool Sent,
+    string Message,
+    string? DevCode,
+    int RetryAfterSeconds,
+    int ExpiresInSeconds);
 
 public record OtpVerifyDto(string Phone, string Code);
 
@@ -18,7 +32,6 @@ public record RegisterDto(
     string FullName,
     ProfileRole Role,
     string Phone,
-    string OtpCode,
     string? Gstin,
     bool IsBusiness,
     BusinessSize BusinessSize,

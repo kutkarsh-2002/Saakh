@@ -28,9 +28,6 @@ public class RegisterDtoValidator : AbstractValidator<RegisterDto>
             .Must(p => p.Count(char.IsDigit) is >= 10 and <= 13)
             .WithMessage("Enter a 10-digit mobile number.");
 
-        RuleFor(x => x.OtpCode)
-            .NotEmpty().WithMessage("Enter the 6-digit code we sent to your phone.");
-
         // GSTIN is optional, but a supplied one has to be well formed before it is worth a
         // registry call (tech-stack.md). The same pattern runs in the Angular form.
         RuleFor(x => x.Gstin!)
@@ -114,6 +111,17 @@ public class UpdateProfileDtoValidator : AbstractValidator<UpdateProfileDto>
         RuleFor(x => x.CapacityMax).GreaterThanOrEqualTo(x => x.CapacityMin)
             .WithMessage("The upper end of the range cannot be below the lower end.");
         RuleFor(x => x.CapacityUnit).NotEmpty().MaximumLength(32);
+    }
+}
+
+public class AddGstinDtoValidator : AbstractValidator<AddGstinDto>
+{
+    public AddGstinDtoValidator()
+    {
+        RuleFor(x => x.Gstin)
+            .NotEmpty().WithMessage("Enter your GSTIN.")
+            .Must(GstinFormat.IsWellFormed)
+            .WithMessage("That is not a valid GSTIN. It is 15 characters, like 27AAPFU0939F1ZV.");
     }
 }
 

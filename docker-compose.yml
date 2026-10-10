@@ -41,6 +41,22 @@ services:
       - Email__SmtpPassword=${SMTP_PASSWORD:-}
       - Email__FromAddress=${EMAIL_FROM:-no-reply@saakh.app}
       - ASPNETCORE_ENVIRONMENT=${ASPNETCORE_ENVIRONMENT:-Production}
+      # There is no SMS gateway in the free stack, so the signup code is returned in
+      # the API response and filled into the form. This is a demo stack — it also
+      # seeds accounts that share one password. Set REVEAL_OTP=false for anything
+      # real: with it on, anyone can confirm any phone number.
+      - Otp__RevealCodeInResponse=${REVEAL_OTP:-true}
+      # How the signup code reaches the user. "Log" delivers nothing — it is what makes
+      # a fresh clone demoable, and it is why the step verifies nothing until this is
+      # set. "Email" sends it to the signup address, which is the only real delivery
+      # that is free in India, where SMS is DLT-regulated and every gateway gates its
+      # API behind payment. Fast2Sms, Msg91 and Twilio put it on the handset. Any real
+      # channel automatically stops the code being returned to the form.
+      - Sms__Provider=${SMS_PROVIDER:-Log}
+      - Sms__ApiKey=${SMS_API_KEY:-}
+      - Sms__TemplateId=${SMS_TEMPLATE_ID:-}
+      - Sms__AccountSid=${SMS_ACCOUNT_SID:-}
+      - Sms__FromNumber=${SMS_FROM_NUMBER:-}
       # One replica, so the API can safely bring its own schema up to date and the
       # stack comes up from cold with no second command. Set to false where more
       # than one instance runs, and apply the migrate bundle once instead — two

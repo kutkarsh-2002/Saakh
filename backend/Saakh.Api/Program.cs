@@ -34,12 +34,16 @@ builder.Services.Configure<JwtOptions>(builder.Configuration.GetSection(JwtOptio
 builder.Services.Configure<GstinOptions>(builder.Configuration.GetSection(GstinOptions.Section));
 builder.Services.Configure<StorageOptions>(builder.Configuration.GetSection(StorageOptions.Section));
 builder.Services.Configure<EmailOptions>(builder.Configuration.GetSection(EmailOptions.Section));
+builder.Services.Configure<OtpOptions>(builder.Configuration.GetSection(OtpOptions.Section));
+builder.Services.Configure<SmsOptions>(builder.Configuration.GetSection(SmsOptions.Section));
+builder.Services.Configure<SettlementOptions>(builder.Configuration.GetSection(SettlementOptions.Section));
 builder.Services.Configure<RateLimitOptions>(builder.Configuration.GetSection(RateLimitOptions.Section));
 builder.Services.Configure<DatabaseOptions>(builder.Configuration.GetSection(DatabaseOptions.Section));
 
 var jwtOptions = builder.Configuration.GetSection(JwtOptions.Section).Get<JwtOptions>() ?? new JwtOptions();
 var gstinOptions = builder.Configuration.GetSection(GstinOptions.Section).Get<GstinOptions>() ?? new GstinOptions();
 var emailOptions = builder.Configuration.GetSection(EmailOptions.Section).Get<EmailOptions>() ?? new EmailOptions();
+var smsOptions = builder.Configuration.GetSection(SmsOptions.Section).Get<SmsOptions>() ?? new SmsOptions();
 
 if (string.IsNullOrWhiteSpace(jwtOptions.Key))
 {
@@ -144,6 +148,7 @@ builder.Services.AddScoped<IProfileService, ProfileService>();
 builder.Services.AddScoped<IDiscoveryService, DiscoveryService>();
 builder.Services.AddScoped<IInterestService, InterestService>();
 builder.Services.AddScoped<IDealService, DealService>();
+builder.Services.AddScoped<IProposalService, ProposalService>();
 builder.Services.AddScoped<IRatingService, RatingService>();
 builder.Services.AddScoped<IAnalyticsService, AnalyticsService>();
 builder.Services.AddScoped<IAdminService, AdminService>();
@@ -157,6 +162,7 @@ builder.Services.AddScoped<DataSeeder>();
 builder.Services.AddScoped<ApprovalEmailJob>();
 builder.Services.AddScoped<GstinRetryJob>();
 builder.Services.AddScoped<SuspensionExpiryJob>();
+builder.Services.AddScoped<SettlementOverdueJob>();
 
 // GSTIN verification: the mock is the default outside Production so automated runs never
 // burn the provider's monthly free quota (tech-stack.md).
@@ -175,6 +181,39 @@ if (gstinOptions.Provider.Equals("GstinApi", StringComparison.OrdinalIgnoreCase)
 else
 {
     builder.Services.AddScoped<IGstinVerifier, MockGstinVerifier>();
+}
+
+// How the signup code reaches the user. "Log" delivers nothing and hands the code back
+// to the form, which is what makes a fresh clone demoable — and what makes the step
+// verify nothing, so a real deployment configures a channel here.
+//
+// "Email" exists because Indian A2P SMS is DLT-regulated and every gateway gates its
+// API behind payment or verification. It is real out-of-band delivery at no cost, and
+// it checks an inbox rather than a handset; the signup form says which.
+switch (smsOptions.Provider.ToLowerInvariant())
+{
+    case "email":
+        builder.Services.AddScoped<IOtpChannel, EmailOtpChannel>();
+        break;
+
+    case "fast2sms":
+        builder.Services.AddHttpClient<IOtpChannel, Fast2SmsChannel>(http =>
+            http.Timeout = TimeSpan.FromSeconds(smsOptions.TimeoutSeconds));
+        break;
+
+    case "msg91":
+        builder.Services.AddHttpClient<IOtpChannel, Msg91Channel>(http =>
+            http.Timeout = TimeSpan.FromSeconds(smsOptions.TimeoutSeconds));
+        break;
+
+    case "twilio":
+        builder.Services.AddHttpClient<IOtpChannel, TwilioChannel>(http =>
+            http.Timeout = TimeSpan.FromSeconds(smsOptions.TimeoutSeconds));
+        break;
+
+    default:
+        builder.Services.AddSingleton<IOtpChannel, LoggingOtpChannel>();
+        break;
 }
 
 builder.Services.AddScoped<IEmailSender>(sp => emailOptions.Provider.ToLowerInvariant() switch
@@ -429,6 +468,11 @@ using (var jobScope = app.Services.CreateScope())
 
         recurring.AddOrUpdate<SuspensionExpiryJob>(
             "suspension-expiry", job => job.RunAsync(), Cron.Hourly());
+
+        // Warns both parties when an agreed settlement date passes, and closes the deal
+        // once the grace period has run out.
+        recurring.AddOrUpdate<SettlementOverdueJob>(
+            "settlement-overdue", job => job.RunAsync(), Cron.Hourly());
     }
     catch (Exception ex)
     {

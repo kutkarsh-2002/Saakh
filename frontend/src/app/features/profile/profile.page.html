@@ -159,18 +159,29 @@
         ) {
           <section class="sk-card sk-card-pad">
             <h3>Visibility in search</h3>
-            <p class="sk-meta avail__text">
-              Going inactive takes you out of search and stops new interest requests reaching you.
-              Your in-flight deals carry on exactly as they are, and you can switch back whenever
-              you want.
-            </p>
+            @if (me.verificationStatus === VerificationStatus.Active) {
+              <p class="sk-meta avail__text">
+                Going inactive takes you out of search and stops new interest requests reaching
+                you. Your in-flight deals carry on exactly as they are, and you can switch back
+                whenever you want.
+              </p>
+            } @else {
+              <!-- The choice is not available yet, so the card says why rather than
+                   offering a control that can only be refused. -->
+              <p class="sk-meta avail__text">
+                Your account is not approved yet, so it does not appear in search and cannot
+                receive interest. It becomes visible on its own the moment it is approved —
+                there is nothing to switch here until then.
+              </p>
+            }
 
             <div class="avail__options" role="group" aria-label="Search visibility">
               <button
                 type="button"
                 class="avail__option"
-                [class.avail__option--on]="me.availabilityStatus === AvailabilityStatus.Active"
-                [attr.aria-pressed]="me.availabilityStatus === AvailabilityStatus.Active"
+                [class.avail__option--on]="visibleInSearch()"
+                [attr.aria-pressed]="visibleInSearch()"
+                [disabled]="me.verificationStatus !== VerificationStatus.Active"
                 (click)="setAvailability(true)"
               >
                 <span class="material-symbols-rounded" aria-hidden="true">visibility</span>
@@ -183,8 +194,9 @@
               <button
                 type="button"
                 class="avail__option"
-                [class.avail__option--on]="me.availabilityStatus === AvailabilityStatus.Inactive"
-                [attr.aria-pressed]="me.availabilityStatus === AvailabilityStatus.Inactive"
+                [class.avail__option--on]="!visibleInSearch()"
+                [attr.aria-pressed]="!visibleInSearch()"
+                [disabled]="me.verificationStatus !== VerificationStatus.Active"
                 (click)="setAvailability(false)"
               >
                 <span class="material-symbols-rounded" aria-hidden="true">pause_circle</span>
@@ -204,8 +216,8 @@
           <form class="sk-card sk-card-pad edit" [formGroup]="form" (ngSubmit)="save()">
             <h2>Edit your details</h2>
             <p class="sk-meta">
-              Your role and your GSTIN are fixed once the account exists — those are the identity
-              the trust record is anchored to.
+              Your role is fixed once the account exists, and a GSTIN cannot be changed once it
+              is verified — those are the identity the trust record is anchored to.
             </p>
 
             <div class="sk-field">
@@ -228,10 +240,20 @@
             <div class="sk-grid-2">
               <div class="sk-field">
                 <label for="isBusiness">Registered business?</label>
-                <select id="isBusiness" class="sk-select" formControlName="isBusiness">
-                  <option [value]="false">No — individual</option>
-                  <option [value]="true">Yes — registered business</option>
-                </select>
+                @if (me.gstinVerified) {
+                  <!-- A verified GSTIN is a business registration, so there is nothing
+                       here to decide. Shown as a settled fact rather than a disabled
+                       control the user keeps trying to change. -->
+                  <p class="settled">
+                    <span class="material-symbols-rounded" aria-hidden="true">verified</span>
+                    Yes — confirmed by your verified GSTIN
+                  </p>
+                } @else {
+                  <select id="isBusiness" class="sk-select" formControlName="isBusiness">
+                    <option [value]="false">No — individual</option>
+                    <option [value]="true">Yes — registered business</option>
+                  </select>
+                }
               </div>
               <div class="sk-field">
                 <label for="businessSize">Size</label>
@@ -370,10 +392,62 @@
               </span>
             </p>
           } @else {
+            <!-- The faster of the two routes, offered first: a vendor who has since
+                 registered should never have to queue for a human review. -->
+            <div class="add-gstin">
+              <h3 class="add-gstin__title">
+                <span class="material-symbols-rounded" aria-hidden="true">badge</span>
+                Have a GSTIN now?
+              </h3>
+              <p class="sk-meta">
+                Add it here. If the government registry confirms it, your account opens
+                immediately — no documents and no waiting for a reviewer.
+              </p>
+
+              <div class="sk-field add-gstin__field">
+                <label for="newGstin">GSTIN</label>
+                <input
+                  id="newGstin"
+                  type="text"
+                  class="sk-input"
+                  [value]="gstinInput()"
+                  (input)="onGstinInput($event)"
+                  placeholder="27AAPFU0939F1ZV"
+                  maxlength="15"
+                  autocapitalize="characters"
+                  spellcheck="false"
+                  [class.is-invalid]="gstinTouched() && !gstinWellFormed()"
+                  [disabled]="verifyingGstin()"
+                />
+                @if (gstinTouched() && !gstinWellFormed()) {
+                  <p class="sk-error">
+                    <span class="material-symbols-rounded" aria-hidden="true">error</span>
+                    A GSTIN is 15 characters, like 27AAPFU0939F1ZV.
+                  </p>
+                } @else {
+                  <p class="sk-hint">
+                    15 characters, printed on your registration certificate and your invoices.
+                  </p>
+                }
+              </div>
+
+              <button
+                type="button"
+                class="sk-btn sk-btn--primary"
+                [disabled]="!gstinWellFormed() || verifyingGstin()"
+                (click)="addGstin()"
+              >
+                <span class="material-symbols-rounded" aria-hidden="true">
+                  {{ verifyingGstin() ? 'hourglass_top' : 'verified' }}
+                </span>
+                {{ verifyingGstin() ? 'Checking the registry…' : 'Verify and open my account' }}
+              </button>
+            </div>
+
             <p class="sk-meta verify__intro">
-              You signed up without a GSTIN, so an administrator checks who you are by reviewing
-              documents you upload. This keeps the barrier low for vendors who were never in the
-              formal system, while still giving the platform a human checkpoint.
+              Otherwise, an administrator checks who you are by reviewing documents you upload.
+              This keeps the barrier low for vendors who were never in the formal system, while
+              still giving the platform a human checkpoint.
             </p>
 
             @if (verification(); as state) {
@@ -401,6 +475,9 @@
                         <option [value]="type">{{ type }}</option>
                       }
                     </select>
+                    <!-- The group names are broad on purpose, so what each one covers
+                         is spelled out rather than left to be guessed. -->
+                    <p class="sk-hint">{{ documentTypeHint() }}</p>
                   </div>
 
                   <div class="sk-field">
@@ -460,8 +537,8 @@
                   <p class="accepted">
                     <span class="sk-eyebrow">What administrators accept</span>
                     <span>
-                      Any one of: {{ evidenceTypes.join(', ').toLowerCase() }}. One clear document
-                      that shows your name and your place of business is usually enough.
+                      A legal, tax or operational document. One clear document that shows your
+                      name and your place of business is usually enough.
                     </span>
                   </p>
                 </div>

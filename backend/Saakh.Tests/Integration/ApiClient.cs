@@ -115,8 +115,8 @@ public class ApiClient
     }
 
     /// <summary>
-    /// Registers a trader end to end, including the mandatory phone OTP. Returns a
-    /// client already carrying that account's access token.
+    /// Registers a trader end to end. Returns a client already carrying that
+    /// account's access token.
     /// </summary>
     public static async Task<ApiClient> RegisterAsync(
         SaakhApiFactory factory,
@@ -130,16 +130,6 @@ public class ApiClient
     {
         var client = new ApiClient(factory.CreateClient());
         var phone = RandomPhone();
-
-        var (otpStatus, otp) = await client.PostAsync<OtpRequestResultDto>(
-            "/api/auth/otp/request", new { phone });
-
-        if (otpStatus != HttpStatusCode.OK || otp?.DevCode is null)
-        {
-            throw new InvalidOperationException(
-                $"OTP request failed with {otpStatus}. The dev code is only returned outside Production.");
-        }
-
         var email = $"{Guid.NewGuid():N}@saakh.test";
 
         var (status, auth) = await client.PostAsync<AuthResultDto>("/api/auth/register", new
@@ -149,7 +139,6 @@ public class ApiClient
             fullName = name,
             role,
             phone,
-            otpCode = otp.DevCode,
             gstin,
             isBusiness = gstin is not null,
             businessSize = gstin is not null ? BusinessSize.Small : BusinessSize.Individual,
@@ -181,6 +170,45 @@ public class ApiClient
             .Select(_ => (char)Random.Shared.Next('A', 'Z' + 1)).ToArray());
 
         return $"27{letters}{Random.Shared.Next(1000, 9999)}F1Z{(char)Random.Shared.Next('A', 'Z' + 1)}";
+    }
+
+    /// <summary>
+    /// The two-party path to an Open deal: one side proposes terms, the other agrees
+    /// them. There is no single-party route, so every test that needs a live deal goes
+    /// through this.
+    /// </summary>
+    public static async Task<DealRowDto> OpenDealAsync(ApiClient proposer, ApiClient accepter,
+        Guid interestId, object? terms = null)
+    {
+        var body = terms ?? new
+        {
+            interestId,
+            category = DealCategory.RawMaterial,
+            categorySubTypeId = 10,
+            capacity = 500,
+            capacityUnit = "kg",
+            materialDescription = "Nagpur oranges, grade A",
+            description = "Weekly supply on 30-day credit.",
+            estimatedSettlementTime = DateTimeOffset.UtcNow.AddDays(30)
+        };
+
+        var (proposeStatus, proposal) = await proposer.PostAsync<DealProposalDto>(
+            "/api/deals/proposals", body);
+
+        if (proposeStatus != HttpStatusCode.OK || proposal is null)
+        {
+            throw new InvalidOperationException($"Proposing terms failed with {proposeStatus}.");
+        }
+
+        var (acceptStatus, deal) = await accepter.PostAsync<DealRowDto>(
+            $"/api/deals/proposals/{proposal.Id}/accept", new { });
+
+        if (acceptStatus != HttpStatusCode.OK || deal is null)
+        {
+            throw new InvalidOperationException($"Agreeing terms failed with {acceptStatus}.");
+        }
+
+        return deal;
     }
 
     private static string RandomPhone() => $"9{Random.Shared.NextInt64(100000000, 999999999)}";

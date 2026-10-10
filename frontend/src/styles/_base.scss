@@ -307,6 +307,10 @@ a:hover {
 .sk-field {
   display: grid;
   gap: var(--sk-space-1);
+  // Rows size to their content. Without this, a field sitting next to one that
+  // is showing an error message stretches to match it, and the two inputs in
+  // the row stop lining up.
+  align-content: start;
 }
 
 .sk-field > label {
@@ -364,12 +368,24 @@ a:hover {
 }
 
 // Valid and invalid are both stated, never left to colour alone: the field gets
-// a thicker border and the message below it carries an icon.
+// a heavier outline and the message below it carries an icon.
+//
+// The weight comes from an inset ring rather than a thicker border, so an input
+// is exactly the same size whether or not it is in error — a 2px border moved
+// the text inside it by a pixel and made the field look misaligned beside its
+// neighbour.
 .sk-input.is-invalid,
 .sk-select.is-invalid,
 .sk-textarea.is-invalid {
   border-color: var(--sk-halted);
-  border-width: 2px;
+  box-shadow: inset 0 0 0 1px var(--sk-halted);
+}
+
+.sk-input.is-invalid:focus,
+.sk-select.is-invalid:focus,
+.sk-textarea.is-invalid:focus {
+  border-color: var(--sk-halted);
+  box-shadow: inset 0 0 0 1px var(--sk-halted), 0 0 0 3px var(--sk-halted-ring);
 }
 
 .sk-input.is-valid,
@@ -463,6 +479,8 @@ a:hover {
   display: grid;
   gap: var(--sk-space-4);
   grid-template-columns: 1fr;
+  // Top-aligned: a hint or an error under one field must not shift the other.
+  align-items: start;
 }
 
 @media (min-width: 860px) {

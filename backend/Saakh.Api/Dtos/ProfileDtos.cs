@@ -16,7 +16,11 @@ public record TrustSummaryDto(
     // Count of 1-star to 5-star ratings received; index 0 is 1 star.
     int[] StarCounts,
     // Deals this profile was auto-flagged at fault for, by the v1 halt rule.
-    int HaltsAtFault);
+    int HaltsAtFault,
+    // Deals the platform closed because the agreed settlement date passed. Recorded
+    // against both parties, and kept apart from the star average so machine findings
+    // are never mixed into what counterparties actually said.
+    int DealsClosedOverdue);
 
 public record CategorySubTypeDto(int Id, DealCategory Category, string Key, string DisplayName, string DefaultUnit);
 
@@ -76,6 +80,20 @@ public record UpdateProfileDto(
     string? OwnTradeDescription);
 
 public record SetAvailabilityDto(bool Active);
+
+/// <summary>Adds a GSTIN to an account that signed up without one.</summary>
+public record AddGstinDto(string Gstin);
+
+/// <summary>
+/// The outcome of adding a GSTIN. <paramref name="Retrying"/> covers the case the
+/// signup form already handles: the registry was unreachable, which is not the
+/// vendor's fault, so the number is kept and a background job tries again.
+/// </summary>
+public record AddGstinResultDto(
+    bool Verified,
+    bool Retrying,
+    string Message,
+    ProfileSummaryDto Profile);
 
 public record EvidenceDocumentDto(
     Guid Id,

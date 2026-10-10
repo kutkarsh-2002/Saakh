@@ -3,7 +3,9 @@ import { MatDialog } from '@angular/material/dialog';
 import { RouterLink } from '@angular/router';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { SaakhApi } from '../../core/api/saakh.api';
+import { EvidenceViewer } from '../../core/util/evidence-viewer';
 import {
+  EvidenceDocument,
   EvidenceDecision,
   VerificationQueueRow,
   VerificationStatus,
@@ -42,6 +44,7 @@ type QueueFilter = 'pending' | 'needs' | 'rejected' | 'all';
 })
 export class VerificationQueuePage {
   private readonly api = inject(SaakhApi);
+  private readonly evidenceViewer = inject(EvidenceViewer);
   private readonly realtime = inject(RealtimeService);
   private readonly dialog = inject(MatDialog);
   private readonly toast = inject(ToastService);
@@ -139,8 +142,8 @@ export class VerificationQueuePage {
     return (row.hoursWaiting ?? 0) > this.slaHours;
   }
 
-  evidenceUrl(id: string): string {
-    return this.api.evidenceUrl(id);
+  openEvidence(document: EvidenceDocument): void {
+    this.evidenceViewer.open(document);
   }
 
   approve(row: VerificationQueueRow): void {

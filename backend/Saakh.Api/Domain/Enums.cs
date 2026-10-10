@@ -103,3 +103,22 @@ public enum ResumeRequestStatus
     Accepted = 2,
     Declined = 3
 }
+
+/// <summary>
+/// Where a set of proposed deal terms stands. A deal is only created once both
+/// parties have agreed the terms, so this is the negotiation that precedes it.
+/// </summary>
+public enum ProposalStatus
+{
+    /// <summary>Waiting on the other party.</summary>
+    Pending = 1,
+
+    /// <summary>Agreed by both sides; the deal exists from this point.</summary>
+    Accepted = 2,
+
+    /// <summary>Answered with amended terms, which supersede these.</summary>
+    Countered = 3,
+
+    /// <summary>Taken back by whoever proposed it, before it was answered.</summary>
+    Withdrawn = 4
+}

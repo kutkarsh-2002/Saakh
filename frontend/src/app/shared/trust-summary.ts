@@ -29,6 +29,15 @@ import { StarRating } from './star-rating';
             {{ trust().haltsAtFault }} at fault
           </span>
         }
+        @if (trust().dealsClosedOverdue > 0) {
+          <span
+            class="compact__fault"
+            matTooltip="Deals the platform closed because the settlement date both parties agreed passed without the deal being settled."
+          >
+            <span class="material-symbols-rounded" aria-hidden="true">schedule</span>
+            {{ trust().dealsClosedOverdue }} closed overdue
+          </span>
+        }
       </span>
     } @else {
       <section class="full">
@@ -81,6 +90,14 @@ import { StarRating } from './star-rating';
           >
             <dt>Halts at fault</dt>
             <dd class="sk-figure">{{ trust().haltsAtFault }}</dd>
+          </div>
+          <div
+            class="counts__item"
+            [class.counts__item--warn]="trust().dealsClosedOverdue > 0"
+            matTooltip="Deals the platform closed because the settlement date both parties agreed came and went unsettled. It is counted separately from the stars, because no counterparty gave it."
+          >
+            <dt>Closed overdue</dt>
+            <dd class="sk-figure">{{ trust().dealsClosedOverdue }}</dd>
           </div>
         </dl>
         }

@@ -20,7 +20,7 @@
           }
         </span>
         <span class="steps__label">
-          {{ item === 1 ? 'Who you are' : item === 2 ? 'Verify' : 'What you deal in' }}
+          {{ item === 1 ? 'Who you are' : item === 2 ? 'Your GSTIN' : 'What you deal in' }}
         </span>
       </li>
     }
@@ -43,9 +43,12 @@
           later — that keeps each trust record unambiguous.
         </p>
 
-        <div class="roles__options">
+        <!-- One control with two states rather than two cards: this is a single
+             either/or choice, and native radios keep arrow-key navigation and the
+             right semantics for a screen reader. -->
+        <div class="roles__switch">
           @for (role of [ProfileRole.Lender, ProfileRole.Seeker]; track role) {
-            <label class="role" [class.role--on]="selectedRole() === role">
+            <label class="side" [class.side--on]="selectedRole() === role">
               <input
                 type="radio"
                 name="role"
@@ -53,26 +56,32 @@
                 [checked]="selectedRole() === role"
                 (change)="pickRole(role)"
               />
-              <span class="material-symbols-rounded role__icon" aria-hidden="true">{{
+              <span class="material-symbols-rounded side__icon" aria-hidden="true">{{
                 roleMeta[role].icon
               }}</span>
-              <span class="role__body">
-                <span class="role__name">{{ roleMeta[role].label }}</span>
-                <span class="role__desc">
-                  {{
-                    role === ProfileRole.Lender
-                      ? 'You provide money or raw material on credit terms.'
-                      : 'You need money or raw material on credit terms.'
-                  }}
-                </span>
-                <span class="role__sees">You will discover {{ roleMeta[role].discovers }}</span>
-              </span>
+              <span class="side__name">{{ roleMeta[role].label }}</span>
               @if (selectedRole() === role) {
-                <span class="material-symbols-rounded role__check" aria-hidden="true">check_circle</span>
+                <span class="material-symbols-rounded side__check" aria-hidden="true"
+                  >check_circle</span
+                >
               }
             </label>
           }
         </div>
+
+        <!-- The consequence of the choice, which is the part worth reading, stated
+             once for whichever side is selected. -->
+        <p class="roles__consequence" aria-live="polite">
+          <span class="material-symbols-rounded" aria-hidden="true">travel_explore</span>
+          <span>
+            {{
+              selectedRole() === ProfileRole.Lender
+                ? 'You provide money or raw material on credit terms.'
+                : 'You need money or raw material on credit terms.'
+            }}
+            <strong>You will discover {{ roleMeta[selectedRole()].discovers }}.</strong>
+          </span>
+        </p>
       </fieldset>
 
       <div class="sk-field">
@@ -135,6 +144,31 @@
       </div>
 
       <div class="sk-field">
+        <label for="phone">Mobile number</label>
+        <div class="inline">
+          <span class="inline__prefix">+91</span>
+          <input
+            id="phone"
+            type="tel"
+            class="sk-input"
+            formControlName="phone"
+            inputmode="numeric"
+            maxlength="10"
+            autocomplete="tel-national"
+            placeholder="10 digits"
+            [class.is-invalid]="invalidIn('identity', 'phone')"
+          />
+        </div>
+        <p class="sk-hint">How a counterparty reaches you once a deal is agreed.</p>
+        @if (invalidIn('identity', 'phone')) {
+          <p class="sk-error">
+            <span class="material-symbols-rounded" aria-hidden="true">error</span>
+            Enter a 10-digit mobile number.
+          </p>
+        }
+      </div>
+
+      <div class="sk-field">
         <label for="password">Choose a password</label>
         <input
           id="password"
@@ -170,87 +204,6 @@
   <!-- ===== Step 2 ========================================================= -->
   @if (step() === 2) {
     <div class="panel-stack" [formGroup]="verification">
-      <!-- Phone OTP: mandatory on both verification paths. -->
-      <section class="sk-card sk-card-pad panel">
-        <header class="panel__head">
-          <h2>Verify your mobile number</h2>
-          <p class="sk-meta">Required for every account, on both verification paths.</p>
-        </header>
-
-        <div class="sk-field">
-          <label for="phone">Mobile number</label>
-          <div class="inline">
-            <span class="inline__prefix">+91</span>
-            <input
-              id="phone"
-              type="tel"
-              class="sk-input"
-              formControlName="phone"
-              inputmode="numeric"
-              maxlength="10"
-              autocomplete="tel-national"
-              placeholder="10 digits"
-              [class.is-invalid]="invalidIn('verification', 'phone')"
-              [class.is-valid]="otpVerified()"
-            />
-            <button
-              type="button"
-              class="sk-btn sk-btn--secondary"
-              (click)="sendOtp()"
-              [disabled]="otpSending() || otpVerified() || verification.controls.phone.invalid"
-            >
-              {{ otpSent() ? 'Resend code' : 'Send code' }}
-            </button>
-          </div>
-          @if (invalidIn('verification', 'phone')) {
-            <p class="sk-error">
-              <span class="material-symbols-rounded" aria-hidden="true">error</span>
-              Enter a 10-digit mobile number.
-            </p>
-          }
-        </div>
-
-        @if (otpSent() && !otpVerified()) {
-          <div class="sk-field">
-            <label for="otpCode">6-digit code</label>
-            <div class="inline">
-              <input
-                id="otpCode"
-                type="text"
-                class="sk-input otp"
-                formControlName="otpCode"
-                inputmode="numeric"
-                maxlength="6"
-                autocomplete="one-time-code"
-                [class.is-invalid]="invalidIn('verification', 'otpCode')"
-              />
-              <button type="button" class="sk-btn sk-btn--primary" (click)="verifyOtp()">
-                Verify
-              </button>
-            </div>
-            @if (otpMessage()) {
-              <p class="sk-hint">{{ otpMessage() }}</p>
-            }
-            @if (devCode()) {
-              <!-- There is no SMS gateway in the free stack, so outside
-                   Production the code is returned and filled in for you. -->
-              <p class="dev-note">
-                <span class="material-symbols-rounded" aria-hidden="true">science</span>
-                Development build: no SMS is sent, so the code
-                <strong>{{ devCode() }}</strong> has been filled in for you.
-              </p>
-            }
-          </div>
-        }
-
-        @if (otpVerified()) {
-          <p class="ok" role="status">
-            <span class="material-symbols-rounded" aria-hidden="true">check_circle</span>
-            Mobile number verified.
-          </p>
-        }
-      </section>
-
       <!-- GSTIN: optional, but it decides which path the account takes. -->
       <section class="sk-card sk-card-pad panel">
         <header class="panel__head">

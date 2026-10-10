@@ -21,6 +21,7 @@ public class SaakhDbContext : IdentityDbContext<AppUser, AppRole, Guid>
     public DbSet<Admin> Admins => Set<Admin>();
     public DbSet<AdminActionLog> AdminActionLogs => Set<AdminActionLog>();
     public DbSet<ResumeRequest> ResumeRequests => Set<ResumeRequest>();
+    public DbSet<DealProposal> DealProposals => Set<DealProposal>();
     public DbSet<Notification> Notifications => Set<Notification>();
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
 
@@ -205,6 +206,38 @@ public class SaakhDbContext : IdentityDbContext<AppUser, AppRole, Guid>
             e.HasOne(x => x.RequestedByProfile).WithMany()
                 .HasForeignKey(x => x.RequestedByProfileId).OnDelete(DeleteBehavior.Restrict);
             e.HasIndex(x => new { x.DealId, x.Status });
+        });
+
+        b.Entity<DealProposal>(e =>
+        {
+            e.Property(x => x.Capacity).HasPrecision(18, 2);
+            e.Property(x => x.CapacityUnit).HasMaxLength(32).IsRequired();
+            e.Property(x => x.MaterialDescription).HasMaxLength(500);
+            e.Property(x => x.Description).HasMaxLength(2000).IsRequired();
+
+            e.HasOne(x => x.Interest).WithMany(i => i.Proposals)
+                .HasForeignKey(x => x.InterestId).OnDelete(DeleteBehavior.Cascade);
+
+            // Restrict, not Cascade: deleting a user already cascades into this table
+            // through the interest, and SQL Server refuses two cascade paths to one
+            // table outright (error 1785).
+            e.HasOne(x => x.ProposedByProfile).WithMany()
+                .HasForeignKey(x => x.ProposedByProfileId).OnDelete(DeleteBehavior.Restrict);
+
+            e.HasOne(x => x.CategorySubType).WithMany()
+                .HasForeignKey(x => x.CategorySubTypeId).OnDelete(DeleteBehavior.Restrict);
+
+            // The deal these terms produced, and the counter that replaced them. Both are
+            // Restrict for the same reason, and the self-reference must never cascade.
+            e.HasOne(x => x.Deal).WithMany()
+                .HasForeignKey(x => x.DealId).OnDelete(DeleteBehavior.Restrict);
+
+            e.HasOne(x => x.SupersededByProposal).WithMany()
+                .HasForeignKey(x => x.SupersededByProposalId).OnDelete(DeleteBehavior.Restrict);
+
+            // One live proposal per interest is the rule the service enforces; this is
+            // what makes finding it cheap.
+            e.HasIndex(x => new { x.InterestId, x.Status });
         });
 
         b.Entity<Notification>(e =>

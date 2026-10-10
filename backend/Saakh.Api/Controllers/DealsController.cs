@@ -14,20 +14,48 @@ namespace Saakh.Api.Controllers;
 public class DealsController : ControllerBase
 {
     private readonly IDealService _deals;
+    private readonly IProposalService _proposals;
     private readonly IRatingService _ratings;
     private readonly ICurrentUser _currentUser;
 
-    public DealsController(IDealService deals, IRatingService ratings, ICurrentUser currentUser)
+    public DealsController(IDealService deals, IProposalService proposals, IRatingService ratings,
+        ICurrentUser currentUser)
     {
         _deals = deals;
+        _proposals = proposals;
         _ratings = ratings;
         _currentUser = currentUser;
     }
 
-    /// <summary>Raising the ticket creates the Deal in Open state, visible to both parties.</summary>
-    [HttpPost("tickets")]
-    public async Task<ActionResult<DealRowDto>> RaiseTicket(RaiseTicketDto dto, CancellationToken ct)
-        => Ok(await _deals.RaiseTicketAsync(await _currentUser.RequireProfileAsync(ct), dto, ct));
+    /// <summary>
+    /// Puts terms to the other party. It does not create the deal: the deal exists once
+    /// they agree, because the settlement date carries a consequence the platform
+    /// enforces on both of them.
+    /// </summary>
+    [HttpPost("proposals")]
+    public async Task<ActionResult<DealProposalDto>> Propose(RaiseTicketDto dto, CancellationToken ct)
+        => Ok(await _proposals.ProposeAsync(await _currentUser.RequireProfileAsync(ct), dto, ct));
+
+    /// <summary>The live terms for a conversation, and the chain that led to them.</summary>
+    [HttpGet("proposals/{interestId:guid}")]
+    public async Task<ActionResult<ProposalThreadDto>> Proposals(Guid interestId, CancellationToken ct)
+        => Ok(await _proposals.ForInterestAsync(await _currentUser.RequireProfileAsync(ct), interestId, ct));
+
+    /// <summary>Agreeing the terms, which opens the deal.</summary>
+    [HttpPost("proposals/{id:guid}/accept")]
+    public async Task<ActionResult<DealRowDto>> AcceptProposal(Guid id, CancellationToken ct)
+        => Ok(await _proposals.AcceptAsync(await _currentUser.RequireProfileAsync(ct), id, ct));
+
+    /// <summary>Answering with amended terms, which supersede the ones put to you.</summary>
+    [HttpPost("proposals/{id:guid}/counter")]
+    public async Task<ActionResult<DealProposalDto>> CounterProposal(Guid id, RaiseTicketDto dto,
+        CancellationToken ct)
+        => Ok(await _proposals.CounterAsync(await _currentUser.RequireProfileAsync(ct), id, dto, ct));
+
+    /// <summary>Taking back terms you proposed, before they were answered.</summary>
+    [HttpPost("proposals/{id:guid}/withdraw")]
+    public async Task<ActionResult<DealProposalDto>> WithdrawProposal(Guid id, CancellationToken ct)
+        => Ok(await _proposals.WithdrawAsync(await _currentUser.RequireProfileAsync(ct), id, ct));
 
     [HttpGet("open")]
     public async Task<ActionResult<IReadOnlyList<DealRowDto>>> Open(CancellationToken ct)

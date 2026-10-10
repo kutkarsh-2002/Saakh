@@ -80,8 +80,9 @@ public class DataSeeder
     private static readonly string[] SeekerBusinessSuffixes =
         ["Kirana Store", "General Stores", "Provision Store", "Fresh Mart", "Dairy Corner", "Medical Store"];
 
+    // The three groups the upload form offers, so seeded rows read the same as real ones.
     private static readonly string[] EvidenceTypes =
-        ["Shop licence", "Aadhaar card", "Electricity bill", "Trade licence", "Rental agreement"];
+        ["Legal document", "Tax document", "Operational document"];
 
     public async Task RunAsync(bool reset = false, CancellationToken ct = default)
     {
@@ -280,7 +281,11 @@ public class DataSeeder
                 // No GSTIN: this is exactly the account the manual checkpoint exists for.
                 Gstin = null,
                 VerificationStatus = status,
-                AvailabilityStatus = AvailabilityStatus.Active,
+                // Same rule the signup path applies: an account that is not approved
+                // is not visible, so it does not claim to be.
+                AvailabilityStatus = status == VerificationStatus.Active
+                    ? AvailabilityStatus.Active
+                    : AvailabilityStatus.Inactive,
                 Country = "India",
                 State = state,
                 District = district,

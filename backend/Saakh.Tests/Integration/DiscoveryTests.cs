@@ -102,7 +102,7 @@ public class DiscoveryTests
         var interest = await lender.PostOkAsync<InterestDto>(
             "/api/interests", new { toProfileId = seeker.ProfileId, note = (string?)null });
         await seeker.PostAsync<InterestDto>($"/api/interests/{interest.Id}/respond", new { accept = true });
-        await lender.PostAsync<DealRowDto>("/api/deals/tickets", new
+        await ApiClient.OpenDealAsync(lender, seeker, interest.Id, new
         {
             interestId = interest.Id,
             category = DealCategory.RawMaterial,

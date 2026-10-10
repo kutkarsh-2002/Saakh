@@ -293,6 +293,15 @@ public class AdminService : IAdminService
 
         profile.VerificationStatus = dto.Approve ? VerificationStatus.Active : VerificationStatus.Rejected;
         profile.RejectionReason = dto.Approve ? null : dto.RejectionReason!.Trim();
+
+        // Approval is the moment the account can actually be found, so it comes out of
+        // the Inactive state it signed up in. A profile an administrator has suspended
+        // or removed is a different matter and is left alone.
+        if (dto.Approve && profile.AvailabilityStatus == AvailabilityStatus.Inactive)
+        {
+            profile.AvailabilityStatus = AvailabilityStatus.Active;
+        }
+
         profile.UpdatedAt = DateTimeOffset.UtcNow;
 
         _db.AdminActionLogs.Add(new AdminActionLog

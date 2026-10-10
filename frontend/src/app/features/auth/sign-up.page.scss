@@ -152,91 +152,115 @@
   color: var(--sk-ink-muted);
 }
 
-.roles__options {
+// One control, two segments, so the choice reads as a single either/or rather
+// than two things to compare. The pair sits in a sunken track and the selected
+// side lifts out of it.
+.roles__switch {
   display: grid;
-  gap: var(--sk-space-3);
-}
-
-@media (min-width: 620px) {
-  .roles__options {
-    grid-template-columns: 1fr 1fr;
-  }
-}
-
-.role {
-  position: relative;
-  display: grid;
-  grid-template-columns: auto 1fr;
-  gap: var(--sk-space-3);
-  padding: var(--sk-space-3);
-  border: 1px solid var(--sk-line-strong);
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+  padding: 4px;
+  background: var(--sk-surface-sunken);
+  border: 1px solid var(--sk-line);
   border-radius: var(--sk-radius-lg);
-  background: var(--sk-surface);
+}
+
+.side {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sk-space-2);
+  min-height: var(--sk-touch);
+  padding: var(--sk-space-3) var(--sk-space-4);
+  border-radius: calc(var(--sk-radius-lg) - 4px);
+  color: var(--sk-ink-muted);
+  font-family: var(--sk-font-display);
+  font-size: 1.0625rem;
+  font-weight: 600;
   cursor: pointer;
+  // Only the fill and the lift move, so switching sides does not reflow the form.
+  transition: background 120ms ease, color 120ms ease, box-shadow 120ms ease;
 }
 
-.role:hover {
-  border-color: var(--sk-ink-subtle);
+.side:hover {
+  color: var(--sk-ink);
 }
 
-// Selected is marked by a 2px ring and a check glyph, not by colour alone.
-.role--on {
-  border-color: var(--sk-brand);
-  border-width: 2px;
-  padding: calc(var(--sk-space-3) - 1px);
-  background: var(--sk-brand-soft);
+// Selected is stated three ways — fill, a raised edge, and a check glyph — never
+// by colour alone.
+.side--on {
+  background: var(--sk-surface);
+  color: var(--sk-ink-strong);
+  box-shadow: inset 0 0 0 2px var(--sk-brand), var(--sk-shadow-sm);
 }
 
-.role input {
+.side input {
   position: absolute;
   opacity: 0;
   pointer-events: none;
 }
 
-.role:has(input:focus-visible) {
+.side:has(input:focus-visible) {
   outline: 3px solid var(--sk-accent);
   outline-offset: 2px;
 }
 
-.role__icon {
-  font-size: 1.75rem;
+.side__icon {
+  font-size: 1.5rem;
+  flex: none;
+}
+
+.side--on .side__icon {
   color: var(--sk-brand);
 }
 
-.role__body {
-  display: grid;
-  gap: 2px;
-  min-width: 0;
+// Pinned to the corner rather than sitting in the row: in flow it would shift the
+// selected label and the two sides would stop looking like one control.
+.side__check {
+  position: absolute;
+  top: 4px;
+  right: 6px;
+  font-size: 1rem;
+  color: var(--sk-brand);
+  font-variation-settings: 'FILL' 1;
 }
 
-.role__name {
-  font-family: var(--sk-font-display);
-  font-size: 1.0625rem;
-  font-weight: 600;
-  color: var(--sk-ink-strong);
+@media (prefers-reduced-motion: reduce) {
+  .side {
+    transition: none;
+  }
 }
 
-.role__desc {
-  font-size: 0.8125rem;
+.roles__consequence {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sk-space-2);
+  margin: var(--sk-space-3) 0 0;
+  font-size: 0.875rem;
   color: var(--sk-ink-muted);
 }
 
-.role__sees {
-  margin-top: 2px;
-  font-size: 0.6875rem;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+.roles__consequence .material-symbols-rounded {
+  font-size: 1.125rem;
   color: var(--sk-brand);
+  flex: none;
 }
 
-.role__check {
-  position: absolute;
-  top: var(--sk-space-2);
-  right: var(--sk-space-2);
-  font-size: 1.25rem;
-  color: var(--sk-brand);
-  font-variation-settings: 'FILL' 1;
+.roles__consequence strong {
+  color: var(--sk-ink);
+}
+
+// Narrow screens: the two names still fit side by side, but the icon does not.
+@media (max-width: 400px) {
+  .side {
+    padding: var(--sk-space-3) var(--sk-space-2);
+    font-size: 1rem;
+  }
+
+  .side__icon {
+    display: none;
+  }
 }
 
 // -----------------------------------------------------------------------------
@@ -265,13 +289,6 @@
   flex: none;
 }
 
-.otp {
-  // Wide tracking on the OTP field so six digits are checkable at a glance.
-  letter-spacing: 0.4em;
-  font-weight: 600;
-  text-align: center;
-}
-
 .gstin {
   text-transform: uppercase;
   letter-spacing: 0.08em;
@@ -296,23 +313,6 @@
   font-size: 1.25rem;
   flex: none;
   font-variation-settings: 'FILL' 1;
-}
-
-.dev-note {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--sk-space-2);
-  margin: var(--sk-space-2) 0 0;
-  padding: var(--sk-space-2) var(--sk-space-3);
-  border-radius: var(--sk-radius);
-  background: var(--sk-pending-soft);
-  color: var(--sk-pending-soft-ink);
-  font-size: 0.8125rem;
-}
-
-.dev-note .material-symbols-rounded {
-  font-size: 1.125rem;
-  flex: none;
 }
 
 // -----------------------------------------------------------------------------
@@ -409,3 +409,4 @@
     transform: rotate(360deg);
   }
 }
+

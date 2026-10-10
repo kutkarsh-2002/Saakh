@@ -2,6 +2,9 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import {
+  DealProposal,
+  ProposalThread,
+  AddGstinResult,
   AdminActionLog,
   AdminActionType,
   AdminOverview,
@@ -111,6 +114,14 @@ export class SaakhApi {
     return this.http.put<ProfileSummary>(apiUrl('/api/profiles/me/availability'), { active });
   }
 
+  /**
+   * Adds a GSTIN to an account that signed up without one. The server verifies it
+   * against the registry and opens the account on the spot when it checks out.
+   */
+  addGstin(gstin: string): Observable<AddGstinResult> {
+    return this.http.post<AddGstinResult>(apiUrl('/api/profiles/me/gstin'), { gstin });
+  }
+
   verificationState(): Observable<VerificationState> {
     return this.http.get<VerificationState>(apiUrl('/api/profiles/me/verification'));
   }
@@ -210,8 +221,28 @@ export class SaakhApi {
 
   // ---- deals ---------------------------------------------------------------
 
-  raiseTicket(payload: RaiseTicketPayload): Observable<DealRow> {
-    return this.http.post<DealRow>(apiUrl('/api/deals/tickets'), payload);
+  /**
+   * Puts terms to the other party. This does not create the deal — the deal exists
+   * once they agree, because the settlement date binds them both.
+   */
+  proposeTerms(payload: RaiseTicketPayload): Observable<DealProposal> {
+    return this.http.post<DealProposal>(apiUrl('/api/deals/proposals'), payload);
+  }
+
+  proposals(interestId: string): Observable<ProposalThread> {
+    return this.http.get<ProposalThread>(apiUrl(`/api/deals/proposals/${interestId}`));
+  }
+
+  acceptProposal(id: string): Observable<DealRow> {
+    return this.http.post<DealRow>(apiUrl(`/api/deals/proposals/${id}/accept`), {});
+  }
+
+  counterProposal(id: string, payload: RaiseTicketPayload): Observable<DealProposal> {
+    return this.http.post<DealProposal>(apiUrl(`/api/deals/proposals/${id}/counter`), payload);
+  }
+
+  withdrawProposal(id: string): Observable<DealProposal> {
+    return this.http.post<DealProposal>(apiUrl(`/api/deals/proposals/${id}/withdraw`), {});
   }
 
   openDeals(): Observable<DealRow[]> {
@@ -324,7 +355,11 @@ export class SaakhApi {
     return this.http.get<AdminActionLog[]>(apiUrl('/api/admin/action-log'), { params });
   }
 
-  evidenceUrl(id: string): string {
-    return apiUrl(`/api/admin/evidence/${id}`);
+  /**
+   * The file itself, over the authenticated client. A plain link cannot work here:
+   * the endpoint is admin-only and a browser navigation carries no bearer token.
+   */
+  evidence(id: string): Observable<Blob> {
+    return this.http.get(apiUrl(`/api/admin/evidence/${id}`), { responseType: 'blob' });
   }
 }

@@ -1,10 +1,17 @@
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  inject,
+  signal,
+} from '@angular/core';
 import { AbstractControl, FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { AuthApi } from '../../core/api/auth.api';
 import { SaakhApi } from '../../core/api/saakh.api';
 import { SessionStore } from '../../core/auth/session.store';
 import {
+  GSTIN_PATTERN,
   BusinessSize,
   CategorySubType,
   DealCategory,
@@ -13,6 +20,7 @@ import {
 } from '../../core/models/domain';
 import { ROLE_META } from '../../core/models/status-vocabulary';
 import { INDIAN_STATES } from '../../core/models/locations';
+import { controlSignal } from '../../core/util/forms';
 import { messageFor } from '../../core/util/toast.service';
 import { AuthLayout } from './auth-layout';
 
@@ -21,7 +29,6 @@ import { AuthLayout } from './auth-layout';
  * feedback and a mistyped number never reaches the registry (and never spends a
  * provider credit).
  */
-const GSTIN_PATTERN = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/;
 
 @Component({
   selector: 'sk-sign-up-page',
@@ -49,13 +56,6 @@ export class SignUpPage {
 
   readonly taxonomy = signal<CategorySubType[]>([]);
 
-  // ---- phone OTP -----------------------------------------------------------
-  readonly otpSent = signal(false);
-  readonly otpVerified = signal(false);
-  readonly otpSending = signal(false);
-  readonly otpMessage = signal<string | null>(null);
-  readonly devCode = signal<string | null>(null);
-
   // ---- GSTIN ---------------------------------------------------------------
   readonly gstinChecking = signal(false);
   readonly gstinResult = signal<GstinCheckResult | null>(null);
@@ -66,12 +66,11 @@ export class SignUpPage {
     isBusiness: [false],
     businessSize: [BusinessSize.Individual],
     email: ['', [Validators.required, Validators.email]],
+    phone: ['', [Validators.required, Validators.pattern(/^\d{10}$/)]],
     password: ['', [Validators.required, Validators.minLength(8)]],
   });
 
   readonly verification = this.fb.nonNullable.group({
-    phone: ['', [Validators.required, Validators.pattern(/^\d{10}$/)]],
-    otpCode: ['', [Validators.required, Validators.pattern(/^\d{6}$/)]],
     gstin: [''],
   });
 
@@ -85,19 +84,24 @@ export class SignUpPage {
     ownTradeDescription: [''],
   });
 
-  readonly selectedRole = computed(() => this.identity.controls.role.value);
+  // Anything the screen derives from a form control reads it as a signal; see
+  // `controlSignal` for why reading `.value` inside a computed silently freezes.
+  readonly selectedRole = controlSignal(this.identity.controls.role);
+  private readonly selectedState = controlSignal(this.trade.controls.state);
+  private readonly selectedCategory = controlSignal(this.trade.controls.category);
+  private readonly selectedSubTypeId = controlSignal(this.trade.controls.categorySubTypeId);
 
   readonly districts = computed(() => {
-    const state = this.trade.controls.state.value;
+    const state = this.selectedState();
     return this.states.find((s) => s.name === state)?.districts ?? [];
   });
 
   readonly subTypes = computed(() =>
-    this.taxonomy().filter((s) => s.category === this.trade.controls.category.value),
+    this.taxonomy().filter((s) => s.category === this.selectedCategory()),
   );
 
   readonly capacityUnit = computed(() => {
-    const id = this.trade.controls.categorySubTypeId.value;
+    const id = this.selectedSubTypeId();
     return this.taxonomy().find((s) => s.id === id)?.defaultUnit ?? 'INR';
   });
 
@@ -144,13 +148,6 @@ export class SignUpPage {
     // Re-typing the GSTIN invalidates whatever the registry said about the old one.
     this.verification.controls.gstin.valueChanges.subscribe(() => this.gstinResult.set(null));
 
-    // Changing the number means the old code no longer applies.
-    this.verification.controls.phone.valueChanges.subscribe(() => {
-      this.otpSent.set(false);
-      this.otpVerified.set(false);
-      this.devCode.set(null);
-      this.otpMessage.set(null);
-    });
   }
 
   private applyDefaultSubType(): void {
@@ -174,58 +171,6 @@ export class SignUpPage {
 
   pickRole(role: ProfileRole): void {
     this.identity.controls.role.setValue(role);
-  }
-
-  // ---- step 2: OTP ---------------------------------------------------------
-
-  sendOtp(): void {
-    const phone = this.verification.controls.phone;
-
-    if (phone.invalid) {
-      phone.markAsTouched();
-      return;
-    }
-
-    this.otpSending.set(true);
-    this.error.set(null);
-
-    this.auth.requestOtp(phone.value).subscribe({
-      next: (result) => {
-        this.otpSending.set(false);
-        this.otpSent.set(true);
-        this.otpMessage.set(result.message);
-        // Outside Production the API hands the code back, so the mandatory OTP
-        // step is demoable with no SMS gateway in the free stack.
-        this.devCode.set(result.devCode);
-        if (result.devCode) {
-          this.verification.controls.otpCode.setValue(result.devCode);
-        }
-      },
-      error: (error: unknown) => {
-        this.otpSending.set(false);
-        this.error.set(messageFor(error, 'We could not send the code. Try again.'));
-      },
-    });
-  }
-
-  verifyOtp(): void {
-    const { phone, otpCode } = this.verification.getRawValue();
-
-    if (this.verification.controls.otpCode.invalid) {
-      this.verification.controls.otpCode.markAsTouched();
-      return;
-    }
-
-    this.auth.verifyOtp(phone, otpCode).subscribe({
-      next: () => {
-        this.otpVerified.set(true);
-        this.otpMessage.set('Mobile number verified.');
-      },
-      error: (error: unknown) => {
-        this.otpVerified.set(false);
-        this.error.set(messageFor(error, 'That code did not work.'));
-      },
-    });
   }
 
   // ---- step 2: GSTIN -------------------------------------------------------
@@ -287,11 +232,6 @@ export class SignUpPage {
     }
 
     if (this.step() === 2) {
-      if (!this.otpVerified()) {
-        this.error.set('Verify your mobile number before continuing.');
-        return;
-      }
-
       // A GSTIN that was typed but not accepted blocks the step, because an
       // invalid GSTIN blocks profile creation until it is corrected.
       if (this.gstinEntered && !this.gstinResult()?.isValid) {
@@ -337,8 +277,7 @@ export class SignUpPage {
         password: identity.password,
         fullName: identity.fullName.trim(),
         role: identity.role,
-        phone: verification.phone.trim(),
-        otpCode: verification.otpCode.trim(),
+        phone: identity.phone.trim(),
         gstin: verification.gstin.trim() ? verification.gstin.trim().toUpperCase() : null,
         isBusiness: identity.isBusiness,
         businessSize: identity.businessSize,

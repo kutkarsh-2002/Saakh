@@ -6,7 +6,6 @@ import {
   BusinessSize,
   DealCategory,
   GstinCheckResult,
-  OtpRequestResult,
   ProfileRole,
   Session,
 } from '../models/domain';
@@ -19,7 +18,6 @@ export interface RegisterPayload {
   fullName: string;
   role: ProfileRole;
   phone: string;
-  otpCode: string;
   gstin: string | null;
   isBusiness: boolean;
   businessSize: BusinessSize;
@@ -39,14 +37,10 @@ export class AuthApi {
   private readonly http = inject(HttpClient);
   private readonly store = inject(SessionStore);
 
-  requestOtp(phone: string): Observable<OtpRequestResult> {
-    return this.http.post<OtpRequestResult>(apiUrl('/api/auth/otp/request'), { phone });
-  }
-
-  verifyOtp(phone: string, code: string): Observable<{ verified: boolean }> {
-    return this.http.post<{ verified: boolean }>(apiUrl('/api/auth/otp/verify'), { phone, code });
-  }
-
+  /**
+   * The email travels with the request because the code may be delivered there
+   * rather than by SMS; the form has collected it a step earlier either way.
+   */
   /** Real-time registry check, called from the signup form before submission. */
   checkGstin(gstin: string): Observable<GstinCheckResult> {
     return this.http.post<GstinCheckResult>(apiUrl('/api/auth/gstin/check'), { gstin });

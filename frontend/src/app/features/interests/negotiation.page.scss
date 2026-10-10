@@ -197,3 +197,39 @@
   font-size: 0.9375rem;
   line-height: 1.55;
 }
+
+// The terms on the table, read as a short record rather than a paragraph: these are
+// the figures both parties are committing to.
+.terms {
+  display: grid;
+  gap: var(--sk-space-2) var(--sk-space-4);
+  grid-template-columns: 1fr 1fr;
+  margin: var(--sk-space-3) 0;
+  padding: var(--sk-space-3);
+  background: var(--sk-surface-sunken);
+  border-radius: var(--sk-radius);
+}
+
+.terms__wide {
+  grid-column: 1 / -1;
+}
+
+.terms dt {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--sk-ink-subtle);
+}
+
+.terms dd {
+  margin: 2px 0 0;
+  font-size: 0.9375rem;
+  color: var(--sk-ink);
+}
+
+// The date carries a platform consequence, so it is the figure that stands out.
+.terms__date {
+  font-weight: 600;
+  color: var(--sk-ink-strong);
+}

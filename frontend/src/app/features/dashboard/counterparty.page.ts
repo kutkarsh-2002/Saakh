@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, inject, input, signal } f
 import { MatDialog } from '@angular/material/dialog';
 import { Router, RouterLink } from '@angular/router';
 import { SaakhApi } from '../../core/api/saakh.api';
-import { ProfileSummary, Rating } from '../../core/models/domain';
+import { Interest, InterestStatus, ProfileSummary, Rating } from '../../core/models/domain';
 import { BUSINESS_SIZE_LABEL, CATEGORY_META, ROLE_META } from '../../core/models/status-vocabulary';
 import { formatDate, formatRange } from '../../core/util/format';
 import { ToastService } from '../../core/util/toast.service';
@@ -50,10 +50,20 @@ import { SendInterestDialog, SendInterestDialogData } from './send-interest.dial
           [title]="party.name"
           [subtitle]="party.district + ', ' + party.state + ', ' + party.country"
         >
-          <button type="button" class="sk-btn sk-btn--primary" (click)="sendInterest(party)">
-            <span class="material-symbols-rounded" aria-hidden="true">send</span>
-            Send interest
-          </button>
+          @if (interest(); as open) {
+            <sk-status-pill [interest]="open.status" size="lg" />
+            @if (open.status === InterestStatus.Accepted) {
+              <button type="button" class="sk-btn sk-btn--secondary" (click)="openChat(open)">
+                <span class="material-symbols-rounded" aria-hidden="true">forum</span>
+                Open chat
+              </button>
+            }
+          } @else {
+            <button type="button" class="sk-btn sk-btn--primary" (click)="sendInterest(party)">
+              <span class="material-symbols-rounded" aria-hidden="true">send</span>
+              Send interest
+            </button>
+          }
         </sk-page-header>
 
         <div class="badges">
@@ -171,6 +181,11 @@ export class CounterpartyPage {
   readonly profile = signal<ProfileSummary | null>(null);
   readonly ratings = signal<Rating[]>([]);
 
+  /** Any interest already open with this profile, so the header reflects it. */
+  readonly interest = signal<Interest | null>(null);
+
+  readonly InterestStatus = InterestStatus;
+
   readonly capacity = computed(() => {
     const party = this.profile();
     return party
@@ -201,6 +216,18 @@ export class CounterpartyPage {
       next: (ratings) => this.ratings.set(ratings),
       error: () => undefined,
     });
+
+    // An interest already sent to, or received from, this profile: without it
+    // the header would offer to send a second one.
+    this.api.interests().subscribe({
+      next: (list) =>
+        this.interest.set(list.find((item) => item.counterparty.id === this.id()) ?? null),
+      error: () => undefined,
+    });
+  }
+
+  openChat(interest: Interest): void {
+    void this.router.navigate(['/interests', interest.id]);
   }
 
   sendInterest(party: ProfileSummary): void {
@@ -215,8 +242,11 @@ export class CounterpartyPage {
         }
 
         this.api.sendInterest(party.id, note).subscribe({
-          next: () =>
-            this.toast.success(`Interest sent to ${party.name}. Chat opens once they accept.`),
+          next: (interest) => {
+            this.toast.success(`Interest sent to ${party.name}. Chat opens once they accept.`);
+            // The header switches to the live status straight away.
+            this.interest.set(interest);
+          },
           error: (error: unknown) => this.toast.error(error),
         });
       });

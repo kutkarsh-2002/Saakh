@@ -88,6 +88,8 @@ public static class NotificationKinds
     public const string DealStateChanged = "deal.state";
     public const string DealHalted = "deal.halted";
     public const string DealCompleted = "deal.completed";
+    public const string SettlementOverdue = "deal.settlement.overdue";
+    public const string DealClosedOverdue = "deal.closed.overdue";
     public const string ResumeRequested = "deal.resume.requested";
     public const string ResumeAccepted = "deal.resume.accepted";
     public const string RatingReceived = "rating.received";

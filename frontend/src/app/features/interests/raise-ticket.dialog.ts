@@ -1,14 +1,25 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
-import { CategorySubType, DealCategory, ProfileSummary } from '../../core/models/domain';
+import {
+  CategorySubType,
+  DealCategory,
+  DealProposal,
+  ProfileSummary,
+} from '../../core/models/domain';
 import { RaiseTicketPayload } from '../../core/api/saakh.api';
+import { controlSignal } from '../../core/util/forms';
 import { formatCapacity } from '../../core/util/format';
 
 export interface RaiseTicketDialogData {
   interestId: string;
   counterparty: ProfileSummary;
   taxonomy: CategorySubType[];
+  /**
+   * Terms being amended. When set, the form opens on what the other party proposed
+   * so the changes read as edits rather than a fresh form filled in again.
+   */
+  existing?: DealProposal | null;
 }
 
 /**
@@ -25,12 +36,29 @@ export interface RaiseTicketDialogData {
   imports: [MatDialogModule, ReactiveFormsModule],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <h2 mat-dialog-title>Raise a ticket with {{ data.counterparty.name }}</h2>
+    <h2 mat-dialog-title>
+      {{ amending ? 'Amend the terms' : 'Propose terms to ' + data.counterparty.name }}
+    </h2>
 
     <div mat-dialog-content class="content">
       <p class="intro">
-        Raising this ticket creates the deal in <strong>Open</strong> state, visible to both of you
-        straight away. Put down what you actually agreed in chat.
+        @if (amending) {
+          Change what you need to. These terms replace what {{ data.counterparty.name }} proposed,
+          and it goes back to them to agree.
+        } @else {
+          This puts terms to {{ data.counterparty.name }}. The deal opens in
+          <strong>Open</strong> state once they agree them — not before.
+        }
+      </p>
+
+      <!-- The date is the one term the platform acts on by itself, so what that
+           means is said here rather than discovered a week after it passes. -->
+      <p class="intro intro--warn">
+        <span class="material-symbols-rounded" aria-hidden="true">schedule</span>
+        <span>
+          If the deal is still unsettled a week after the settlement date, the platform closes it
+          and records that on <strong>both</strong> of your trust records.
+        </span>
       </p>
 
       <form class="form" [formGroup]="form">
@@ -59,7 +87,12 @@ export interface RaiseTicketDialogData {
           <label for="subType">
             {{ category() === DealCategory.Money ? 'Type of credit' : 'Material type' }}
           </label>
-          <select id="subType" class="sk-select" formControlName="categorySubTypeId">
+          <select
+            id="subType"
+            class="sk-select"
+            formControlName="categorySubTypeId"
+            (change)="onSubTypeChange()"
+          >
             @for (option of subTypes(); track option.id) {
               <option [value]="option.id">{{ option.displayName }}</option>
             }
@@ -97,13 +130,22 @@ export interface RaiseTicketDialogData {
               type="text"
               class="sk-input"
               formControlName="capacityUnit"
+              list="capacityUnitOptions"
+              autocomplete="off"
               maxlength="32"
             />
+            <!-- A list to pick from, and still a plain text field: this market
+                 counts in units no fixed list will ever cover. -->
+            <datalist id="capacityUnitOptions">
+              @for (option of unitOptions(); track option) {
+                <option [value]="option"></option>
+              }
+            </datalist>
             <p class="sk-hint">
               {{
                 category() === DealCategory.Money
-                  ? 'INR unless you agreed otherwise.'
-                  : 'Whatever you both count in: kg, crates, litres.'
+                  ? 'Pick a currency or type another one.'
+                  : 'Pick one, or type whatever you both count in.'
               }}
             </p>
           </div>
@@ -198,7 +240,7 @@ export interface RaiseTicketDialogData {
       <button type="button" class="sk-btn sk-btn--secondary" (click)="cancel()">Cancel</button>
       <button type="button" class="sk-btn sk-btn--primary" (click)="submit()">
         <span class="material-symbols-rounded" aria-hidden="true">post_add</span>
-        Raise ticket &amp; open the deal
+        {{ amending ? 'Send amended terms' : 'Send terms' }}
       </button>
     </div>
   `,
@@ -229,15 +271,64 @@ export class RaiseTicketDialog {
     this.data.taxonomy.filter((option) => option.category === this.category()),
   );
 
+  // Read as signals, not as `.value` inside a computed — see `controlSignal`.
+  // The live preview below the figure is the whole point of this dialog's form,
+  // and it is exactly what silently stops updating when this is got wrong.
+  private readonly selectedSubTypeId = controlSignal(this.form.controls.categorySubTypeId);
+  private readonly capacityValue = controlSignal(this.form.controls.capacity);
+  private readonly unitValue = controlSignal(this.form.controls.capacityUnit);
+
+  /**
+   * What this trade is counted in. The list is a shortcut, not a constraint —
+   * the field stays free text, because vendors here settle in units no fixed
+   * list covers, and forcing a choice would make them record the wrong figure.
+   * The sub-type's own default leads, since it is the likeliest answer.
+   */
+  readonly unitOptions = computed(() => {
+    const common =
+      this.category() === DealCategory.Money
+        ? MONEY_UNITS
+        : MATERIAL_UNITS;
+
+    const preferred = this.subTypes().find(
+      (option) => option.id === Number(this.selectedSubTypeId()),
+    )?.defaultUnit;
+
+    return [...new Set([preferred, ...common].filter((unit): unit is string => !!unit))];
+  });
+
   readonly capacityPreview = computed(() => {
-    const value = Number(this.form.controls.capacity.value);
+    const value = Number(this.capacityValue());
     if (!value) {
       return null;
     }
-    return formatCapacity(value, this.form.controls.capacityUnit.value, this.category());
+    return formatCapacity(value, this.unitValue(), this.category());
   });
 
+  /** True when answering terms that were put to us, rather than opening a negotiation. */
+  readonly amending = !!this.data.existing;
+
   constructor() {
+    const existing = this.data.existing;
+
+    if (existing) {
+      // Amending starts from their terms so the difference is visible; the date is
+      // the one field most counters change.
+      this.category.set(existing.category);
+      this.applyCategoryDefaults(existing.subType?.id ?? null);
+
+      this.form.patchValue({
+        categorySubTypeId: existing.subType?.id ?? null,
+        capacity: existing.capacity,
+        capacityUnit: existing.capacityUnit,
+        materialDescription: existing.materialDescription ?? '',
+        description: existing.description,
+        settlementDate: existing.estimatedSettlementTime.slice(0, 10),
+      });
+
+      return;
+    }
+
     // Seed the form from the counterparty's own declared sub-type: it is the
     // most likely answer, and it keeps the shared taxonomy consistent.
     this.applyCategoryDefaults(this.data.counterparty.subType?.id ?? null);
@@ -261,6 +352,17 @@ export class RaiseTicketDialog {
       material.setValue('');
     }
     material.updateValueAndValidity();
+  }
+
+  /** Keeps the unit in step with the material type the user picks. */
+  onSubTypeChange(): void {
+    const chosen = this.subTypes().find(
+      (option) => option.id === Number(this.form.controls.categorySubTypeId.value),
+    );
+
+    if (chosen?.defaultUnit) {
+      this.form.controls.capacityUnit.setValue(chosen.defaultUnit);
+    }
   }
 
   pickCategory(category: DealCategory): void {
@@ -307,3 +409,31 @@ function defaultSettlementDate(): string {
   date.setDate(date.getDate() + 30);
   return date.toISOString().slice(0, 10);
 }
+
+/** Currencies an Indian vendor realistically settles a credit line in. */
+const MONEY_UNITS = ['INR', 'USD', 'EUR', 'AED', 'GBP'];
+
+/**
+ * How raw material is actually counted in this market — weight, volume, and the
+ * packing units a consignment is agreed in. Ordered by how often they come up,
+ * not alphabetically, so the common answer is the first one in the list.
+ */
+const MATERIAL_UNITS = [
+  'kg',
+  'quintal',
+  'tonne',
+  'litre',
+  'crate',
+  'bag',
+  'sack',
+  'box',
+  'carton',
+  'bundle',
+  'bale',
+  'piece',
+  'dozen',
+  'drum',
+  'metre',
+  'sq ft',
+  'units',
+];

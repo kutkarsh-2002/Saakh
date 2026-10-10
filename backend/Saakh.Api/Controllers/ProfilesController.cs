@@ -40,6 +40,15 @@ public class ProfilesController : ControllerBase
         CancellationToken ct)
         => Ok(await _profiles.SetAvailabilityAsync(await _currentUser.RequireProfileAsync(ct), dto.Active, ct));
 
+    /// <summary>
+    /// Adds a GSTIN to an account that signed up without one. A number the registry
+    /// confirms opens the account on the spot, so a vendor who gets registered after
+    /// joining does not have to wait on the manual review queue.
+    /// </summary>
+    [HttpPost("me/gstin")]
+    public async Task<ActionResult<AddGstinResultDto>> AddGstin(AddGstinDto dto, CancellationToken ct)
+        => Ok(await _profiles.AddGstinAsync(await _currentUser.RequireProfileAsync(ct), dto.Gstin, ct));
+
     /// <summary>The four-state verification banner payload.</summary>
     [HttpGet("me/verification")]
     public async Task<ActionResult<VerificationStateDto>> Verification(CancellationToken ct)

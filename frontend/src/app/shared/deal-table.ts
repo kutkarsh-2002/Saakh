@@ -107,6 +107,14 @@ import { VerificationBadge } from './verification-badge';
                     </span>
                   } @else if (row.dealState === DealState.Halted && row.haltedByName) {
                     <span class="fault fault--them">{{ row.haltedByName }} halted</span>
+                  } @else if (row.closedOverdue) {
+                    <!-- Nobody halted this one: the agreed date passed. -->
+                    <span
+                      class="fault"
+                      matTooltip="The settlement date you both agreed passed without the deal being settled, so the platform closed it. It is recorded on both trust records."
+                    >
+                      closed overdue
+                    </span>
                   }
                   @if (row.frozen) {
                     <span

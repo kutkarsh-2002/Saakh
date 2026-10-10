@@ -32,7 +32,11 @@ Saakh never holds, moves or guarantees money or material. It is a discovery, agr
 
 A working end-to-end implementation of the v1 scope in `spec.md`.
 
-**Registration and verification.** Two signup paths. A GSTIN is validated against the government registry in real time and an invalid one blocks account creation; a valid one makes the profile Active immediately. Without a GSTIN the account is created but every tab except its own Profile is locked until an Admin reviews uploaded evidence. Phone OTP is mandatory on both paths. The four verification states (Needs Approval → Pending → Active/Rejected) are a real access boundary, enforced in the API as well as in the Angular route guards.
+**Agreeing a deal.** A ticket proposes terms rather than creating a deal. The other party agrees them, or answers with amended terms that supersede them and pass the turn back; the deal is created, in Open, only once both sides have agreed. This exists because of the settlement date: the platform acts on that date by itself, so a date only one party chose must not be able to bind the other.
+
+**Settlement the platform enforces.** When the agreed date passes, both parties are warned once. If the deal is still unsettled after a grace period of seven days, the platform closes it and records the closure on both trust records. It is not a halt — nobody is marked as having triggered it — and no rating is invented on anyone's behalf: the closure is counted as its own fact next to the stars counterparties actually gave. Deals frozen by an administrator are left alone, since the parties cannot act on them. Closing is opt-out via `Settlement__AutoCloseOverdue`; the warning is not.
+
+**Registration and verification.** Two signup paths. A GSTIN is validated against the government registry in real time and an invalid one blocks account creation; a valid one makes the profile Active immediately. Without a GSTIN the account is created but every tab except its own Profile is locked until an Admin reviews uploaded evidence. A mobile number is collected as a contact detail. The four verification states (Needs Approval → Pending → Active/Rejected) are a real access boundary, enforced in the API as well as in the Angular route guards.
 
 **Discovery.** A symmetric Opportunity dashboard: a Lender sees Seekers, a Seeker sees Lenders. Default ranking blends location proximity, matching supply/need category and settled history, so the first page is useful with no filters applied. Multi-select filters on location, category, sub-type, capacity range and minimum rating. Inactive, Suspended and Removed profiles are excluded entirely.
 
@@ -298,13 +302,18 @@ Everything is environment-driven; `.env.example` lists every variable the compos
 | `Email__Provider` | `Log` | `Smtp` (Mailtrap) or `SendGrid` |
 | `Storage__EvidenceRoot` | `storage/evidence` | Mounted as a Docker volume |
 | `Database__MigrateOnStartup` | Development only | `true` in compose; set `false` for multi-replica and use the migrate bundle |
+| `Sms__Provider` | `Log` | `Fast2Sms`, `Msg91` or `Twilio` to actually send the code |
+| `Otp__ResendCooldownSeconds` | `60` | Enforced server-side, not just in the form |
 | `RateLimits__GstinPermitLimit` | `10` per 10 min | Protects the metered GSTIN quota |
 | `RateLimits__SignupPermitLimit` | `30` per 5 min | Blunts automated signup abuse |
 
 **The GSTIN mock** is deterministic, so the failure paths can be rehearsed without the live registry: a well-formed number verifies, one starting `00` comes back unregistered, and one starting `99` simulates a registry timeout and exercises the retry job. Live verification spends real credits from the 100/month free tier — rehearse with the mock and switch over only for an actual demo.
 
-**Phone OTP** has no SMS gateway in the free stack. Outside Production the API returns the code in the response and the signup form fills it in, with a note on screen saying so. In Production it is only ever logged. The flow and its gating are real; only the delivery channel is stubbed.
+**Phone OTP was removed from signup.** `spec.md` §5 makes it mandatory on both paths; this build does not implement it, by decision. The number is still collected as a contact detail and still format-validated, but nothing verifies that the person signing up controls it.
 
+The delivery machinery is still in the codebase and still tested — `IOtpChannel` with `Log`, `Email`, `Fast2Sms`, `Msg91` and `Twilio` behind it, plus the issue/expiry/resend-window service. Only the signup gate and its two endpoints are gone, so restoring the step is a matter of re-exposing them rather than rebuilding anything.
+
+Worth knowing if it is ever restored: Indian A2P SMS is DLT-regulated, and every gateway gates its API behind payment or verification. Fast2SMS refuses `route=q` with *"complete one transaction of 100 INR or more before using API route"* and `route=otp` with *"complete website verification"*, regardless of the free signup credit sitting in the wallet. The `Email` channel exists because it is the only delivery that is both real and free at this volume — it verifies an inbox rather than a handset.
 ---
 
 ## Verification
@@ -332,6 +341,8 @@ Every screen was rendered headlessly against seeded data and checked for console
 
 ## Known limits
 
+- **Signup does not verify the mobile number.** `spec.md` §5 requires a phone OTP on both paths; it was removed at the owner's direction after the cost of real SMS delivery in India became clear. The number is collected and format-checked, nothing more. The OTP service and its delivery channels remain in the codebase and under test, so the step can be restored without rebuilding it.
+- **An auto-closed deal flags both parties, including one who was ready.** If a lender confirmed settlement and the seeker never did, both records carry the closure equally. That is the rule as specified, and it is a known unfairness: the trust record is meant to be a signal worth checking, and this adds noise to it. Flagging only the party who did not confirm would be the fairer rule.
 - **Halt-fault fairness** ships unresolved, per the spec. A reason-based fault model is deferred.
 - **Accepted evidence and review SLA** were left open by the spec. This build states an explicit accepted-document list in the UI and targets 48 hours, flagging over-SLA rows in the Admin queue; neither is enforced by the platform.
 - **Discovery ranking** is computed in memory over the filtered candidate set. That is fine at pilot scale and would move into SQL (or a materialised trust-stats table) before it had to serve a large directory.

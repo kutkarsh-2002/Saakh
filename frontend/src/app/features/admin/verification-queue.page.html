@@ -172,15 +172,14 @@
                         {{ formatDateTime(document.submittedAt) }}
                       </span>
                     </span>
-                    <a
+                    <button
+                      type="button"
                       class="sk-btn sk-btn--secondary sk-btn--sm"
-                      [href]="evidenceUrl(document.id)"
-                      target="_blank"
-                      rel="noopener"
+                      (click)="openEvidence(document)"
                     >
                       <span class="material-symbols-rounded" aria-hidden="true">open_in_new</span>
                       View
-                    </a>
+                    </button>
                   </li>
                 }
               </ul>

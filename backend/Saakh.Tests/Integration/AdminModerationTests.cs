@@ -266,7 +266,7 @@ public class AdminModerationTests
             "/api/interests", new { toProfileId = seeker.ProfileId, note = (string?)null });
         await seeker.PostAsync<InterestDto>($"/api/interests/{interest.Id}/respond", new { accept = true });
 
-        var (_, deal) = await lender.PostAsync<DealRowDto>("/api/deals/tickets", new
+        var deal = await ApiClient.OpenDealAsync(lender, seeker, interest.Id, new
         {
             interestId = interest.Id,
             category = DealCategory.RawMaterial,

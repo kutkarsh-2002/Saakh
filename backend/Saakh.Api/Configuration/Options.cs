@@ -96,3 +96,92 @@ public class DatabaseOptions
     /// </summary>
     public bool? MigrateOnStartup { get; set; }
 }
+
+/// <summary>
+/// Phone verification. There is no SMS gateway in the free stack, so the code is
+/// issued in-process and written to the log; the flow and its gating are real,
+/// only the delivery channel is stubbed.
+/// </summary>
+public class OtpOptions
+{
+    public const string Section = "Otp";
+
+    /// <summary>
+    /// Return the code in the API response so the signup flow can be completed
+    /// without an SMS gateway. Unset means "outside Production only".
+    ///
+    /// Turning this on defeats phone verification — anyone can confirm any number
+    /// — so it belongs in a demo stack and nowhere else. The compose file enables
+    /// it deliberately, and says so.
+    /// </summary>
+    public bool? RevealCodeInResponse { get; set; }
+
+    /// <summary>How long a code stays valid.</summary>
+    public int LifetimeMinutes { get; set; } = 10;
+
+    /// <summary>
+    /// How long before another code can be requested for the same number. Stops a
+    /// signup form being used to pump messages at somebody else's phone.
+    /// </summary>
+    public int ResendCooldownSeconds { get; set; } = 60;
+}
+
+/// <summary>
+/// The SMS gateway that carries the signup code.
+///
+/// "Log" is the default and sends nothing: the code goes to the API log and back to
+/// the signup form, which makes the flow demoable and makes phone verification
+/// meaningless. Configure a real provider and the code goes to the handset instead,
+/// and stops being returned.
+/// </summary>
+public class SmsOptions
+{
+    public const string Section = "Sms";
+
+    /// <summary>"Log" (default), "Fast2Sms", "Msg91" or "Twilio".</summary>
+    public string Provider { get; set; } = "Log";
+
+    public string ApiKey { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Fast2SMS only. "q" (Quick SMS) is the route for senders without DLT
+    /// registration and is the default. "otp" uses Fast2SMS's OTP route, which their
+    /// dashboard gates behind website verification.
+    /// </summary>
+    public string Fast2SmsRoute { get; set; } = "q";
+
+    /// <summary>MSG91 only: the DLT-approved template the code is sent through.</summary>
+    public string TemplateId { get; set; } = string.Empty;
+
+    /// <summary>Twilio only.</summary>
+    public string AccountSid { get; set; } = string.Empty;
+
+    /// <summary>Twilio only: the number messages are sent from, in E.164.</summary>
+    public string FromNumber { get; set; } = string.Empty;
+
+    /// <summary>Prefixed to a number given without one. India.</summary>
+    public string DefaultCountryCode { get; set; } = "91";
+
+    public int TimeoutSeconds { get; set; } = 15;
+}
+
+/// <summary>
+/// What the platform does when an agreed settlement date passes.
+///
+/// The date is the one term both parties commit to that the platform later acts on
+/// by itself, so the grace period matters: settlement slipping by a day is ordinary
+/// trade, and closing on the stroke of the deadline would punish normal business.
+/// </summary>
+public class SettlementOptions
+{
+    public const string Section = "Settlement";
+
+    /// <summary>Days past the agreed date before the platform closes the deal.</summary>
+    public int GraceDays { get; set; } = 7;
+
+    /// <summary>
+    /// Off by default outside the demo stack. Closing deals and marking both trust
+    /// records is irreversible, so it is switched on deliberately.
+    /// </summary>
+    public bool AutoCloseOverdue { get; set; } = true;
+}

@@ -83,26 +83,95 @@
             </a>
           </section>
         } @else if (item.chatUnlocked) {
-          <section class="sk-card sk-card-pad next">
-            <p class="sk-eyebrow">Next step</p>
-            <h2>Agreed the terms?</h2>
-            <p class="sk-meta">
-              Raising a ticket turns what you agreed into a tracked deal, in
-              <strong>Open</strong> state and visible to you both. Either of you can raise it.
-            </p>
-            <button
-              type="button"
-              class="sk-btn sk-btn--primary sk-btn--block"
-              (click)="raiseTicket()"
-            >
-              <span class="material-symbols-rounded" aria-hidden="true">post_add</span>
-              Raise a ticket
-            </button>
-            <p class="next__note">
-              Nothing is tracked until a ticket exists, so a deal struck only in chat leaves no
-              trust record for either of you.
-            </p>
-          </section>
+          @if (liveProposal(); as terms) {
+            <section class="sk-card sk-card-pad next">
+              <p class="sk-eyebrow">
+                {{ awaitingMe() ? 'Your turn' : 'Waiting on them' }}
+              </p>
+              <h2>{{ terms.proposedByMe ? 'Terms you proposed' : 'Terms on the table' }}</h2>
+
+              <dl class="terms">
+                <div>
+                  <dt>{{ terms.category === 1 ? 'Amount' : 'Quantity' }}</dt>
+                  <dd>{{ formatCapacity(terms.capacity, terms.capacityUnit, terms.category) }}</dd>
+                </div>
+                @if (terms.materialDescription) {
+                  <div>
+                    <dt>Material</dt>
+                    <dd>{{ terms.materialDescription }}</dd>
+                  </div>
+                }
+                <div>
+                  <dt>Settle by</dt>
+                  <dd class="terms__date">{{ formatDate(terms.estimatedSettlementTime) }}</dd>
+                </div>
+                <div class="terms__wide">
+                  <dt>What was agreed</dt>
+                  <dd>{{ terms.description }}</dd>
+                </div>
+              </dl>
+
+              @if (awaitingMe()) {
+                <!-- The consequence of the date is stated before it is agreed, not after
+                     the platform acts on it. -->
+                <p class="next__note">
+                  Agreeing opens the deal for both of you. If it is still unsettled a week after
+                  that date, the platform closes it and records that on both trust records.
+                </p>
+                <button
+                  type="button"
+                  class="sk-btn sk-btn--primary sk-btn--block"
+                  (click)="acceptTerms()"
+                >
+                  <span class="material-symbols-rounded" aria-hidden="true">handshake</span>
+                  Agree and open the deal
+                </button>
+                <button
+                  type="button"
+                  class="sk-btn sk-btn--secondary sk-btn--block"
+                  (click)="counterTerms()"
+                >
+                  <span class="material-symbols-rounded" aria-hidden="true">edit_note</span>
+                  Answer with different terms
+                </button>
+              } @else {
+                <p class="next__note">
+                  {{ item.counterparty.name }} has not answered yet. They can agree these terms or
+                  send back amended ones.
+                </p>
+                <button
+                  type="button"
+                  class="sk-btn sk-btn--secondary sk-btn--block"
+                  (click)="withdrawTerms()"
+                >
+                  <span class="material-symbols-rounded" aria-hidden="true">undo</span>
+                  Withdraw these terms
+                </button>
+              }
+            </section>
+          } @else {
+            <section class="sk-card sk-card-pad next">
+              <p class="sk-eyebrow">Next step</p>
+              <h2>Agreed the terms?</h2>
+              <p class="sk-meta">
+                Put them in writing. The deal opens in <strong>Open</strong> state once
+                {{ item.counterparty.name }} agrees them — both of you commit to the settlement
+                date, because the platform acts on it.
+              </p>
+              <button
+                type="button"
+                class="sk-btn sk-btn--primary sk-btn--block"
+                (click)="proposeTerms()"
+              >
+                <span class="material-symbols-rounded" aria-hidden="true">post_add</span>
+                Propose terms
+              </button>
+              <p class="next__note">
+                Nothing is tracked until a deal exists, so an arrangement struck only in chat
+                leaves no trust record for either of you.
+              </p>
+            </section>
+          }
         }
 
         <section class="sk-card sk-card-pad">

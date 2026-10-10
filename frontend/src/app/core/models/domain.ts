@@ -77,6 +77,14 @@ export enum ResumeRequestStatus {
   Declined = 3,
 }
 
+/** Where a set of proposed deal terms stands, before any deal exists. */
+export enum ProposalStatus {
+  Pending = 1,
+  Accepted = 2,
+  Countered = 3,
+  Withdrawn = 4,
+}
+
 export interface CategorySubType {
   id: number;
   category: DealCategory;
@@ -100,6 +108,12 @@ export interface TrustSummary {
   starCounts: number[];
   /** Deals this profile was auto-flagged at fault for under the v1 halt rule. */
   haltsAtFault: number;
+  /**
+   * Deals the platform closed because the agreed settlement date passed. Recorded
+   * against both parties, and kept apart from the star average so a machine finding
+   * is never mistaken for what a counterparty said.
+   */
+  dealsClosedOverdue: number;
 }
 
 export interface ProfileSummary {
@@ -187,6 +201,48 @@ export interface VerificationState {
   lastSubmittedAt: string | null;
 }
 
+/**
+ * The GSTIN format, mirrored from `GstinFormat.Pattern` on the server so a typo is
+ * caught before it spends a provider credit. One definition for the signup form and
+ * the add-a-GSTIN form, because two copies would drift.
+ */
+export const GSTIN_PATTERN = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/;
+
+/** The result of adding a GSTIN to an account that signed up without one. */
+export interface AddGstinResult {
+  verified: boolean;
+  /** The registry was unreachable; the number is kept and retried in the background. */
+  retrying: boolean;
+  message: string;
+  profile: ProfileSummary;
+}
+
+/** Terms one party has put to the other. Agreeing them is what creates the deal. */
+export interface DealProposal {
+  id: string;
+  interestId: string;
+  proposedBy: ProfileSummary;
+  proposedByMe: boolean;
+  category: DealCategory;
+  subType: CategorySubType | null;
+  capacity: number;
+  capacityUnit: string;
+  materialDescription: string | null;
+  description: string;
+  estimatedSettlementTime: string;
+  status: ProposalStatus;
+  /** True when it is this viewer's turn to agree or amend. */
+  awaitingMyResponse: boolean;
+  dealId: string | null;
+  createdAt: string;
+  respondedAt: string | null;
+}
+
+export interface ProposalThread {
+  live: DealProposal | null;
+  history: DealProposal[];
+}
+
 export interface Interest {
   id: string;
   counterparty: ProfileSummary;
@@ -270,6 +326,8 @@ export interface DealRow {
   canRate: boolean;
   pendingResumeRequest: ResumeRequest | null;
   frozen: boolean;
+  /** The platform closed this deal because the agreed settlement date passed. */
+  closedOverdue: boolean;
 }
 
 export interface DealDetail {
@@ -323,10 +381,15 @@ export interface GstinCheckResult {
 }
 
 export interface OtpRequestResult {
+  /** False when a code was already sent moments ago; the existing one still stands. */
   sent: boolean;
   message: string;
-  /** Returned outside Production only, so the flow is demoable with no SMS gateway. */
+  /** Returned only where the demo channel is on, so the flow works with no SMS gateway. */
   devCode: string | null;
+  /** Seconds before another code can be asked for. */
+  retryAfterSeconds: number;
+  /** Seconds the issued code remains valid. */
+  expiresInSeconds: number;
 }
 
 // ---- Admin ------------------------------------------------------------------

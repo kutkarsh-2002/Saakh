@@ -245,14 +245,13 @@
                             : 'Awaiting'
                       }}
                     </span>
-                    <a
+                    <button
+                      type="button"
                       class="sk-btn sk-btn--secondary sk-btn--sm"
-                      [href]="evidenceUrl(document.id)"
-                      target="_blank"
-                      rel="noopener"
+                      (click)="openEvidence(document)"
                     >
                       View
-                    </a>
+                    </button>
                   </span>
                 </li>
               }

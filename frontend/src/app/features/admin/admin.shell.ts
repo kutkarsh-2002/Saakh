@@ -1,3 +1,4 @@
+import { EvidenceViewer } from '../../core/util/evidence-viewer';
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { SaakhApi } from '../../core/api/saakh.api';
@@ -15,6 +16,8 @@ import { RealtimeService } from '../../core/realtime/realtime.service';
 @Component({
   selector: 'sk-admin-shell',
   imports: [RouterOutlet, RouterLink, RouterLinkActive],
+  // Shared by the queue and the profile screens beneath this shell.
+  providers: [EvidenceViewer],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="sk-page">

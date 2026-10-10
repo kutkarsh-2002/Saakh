@@ -9,7 +9,13 @@ namespace Saakh.Api.Services;
 
 public interface IDealService
 {
-    Task<DealRowDto> RaiseTicketAsync(Profile actor, RaiseTicketDto dto, CancellationToken ct = default);
+    /// <summary>
+    /// Creates the deal from terms both parties have agreed. There is no path that
+    /// creates one from a single party's say-so: the settlement date carries a
+    /// platform-enforced consequence, so it is agreed before it binds anyone.
+    /// </summary>
+    Task<DealRowDto> CreateFromProposalAsync(Profile accepter, DealProposal proposal,
+        CancellationToken ct = default);
 
     Task<IReadOnlyList<DealRowDto>> OpenDealsAsync(Profile actor, CancellationToken ct = default);
 
@@ -58,49 +64,39 @@ public class DealService : IDealService
         // splitting keeps the row count linear in the number of deals.
         .AsSplitQuery();
 
-    public async Task<DealRowDto> RaiseTicketAsync(Profile actor, RaiseTicketDto dto, CancellationToken ct = default)
+    public async Task<DealRowDto> CreateFromProposalAsync(Profile accepter, DealProposal proposal,
+        CancellationToken ct = default)
     {
-        RequireUnlocked(actor);
+        RequireUnlocked(accepter);
 
-        var interest = await _db.Interests
-            .Include(i => i.FromProfile)
-            .Include(i => i.ToProfile)
-            .FirstOrDefaultAsync(i => i.Id == dto.InterestId, ct)
-            ?? throw DomainException.NotFound("That interest thread no longer exists.");
+        var interest = proposal.Interest;
+        var proposer = proposal.ProposedByProfile;
 
-        if (interest.FromProfileId != actor.Id && interest.ToProfileId != actor.Id)
-        {
-            throw DomainException.Forbidden("You are not part of that conversation.");
-        }
-
-        // A ticket is only raised once both sides have agreed, which the platform models as
-        // an accepted Interest (spec, Interest to Deal creation).
         if (interest.Status != InterestStatus.Accepted)
         {
-            throw new DomainException("A ticket can only be raised once the interest has been accepted.");
+            throw new DomainException("A deal can only be opened once the interest has been accepted.");
         }
 
-        var other = interest.FromProfileId == actor.Id ? interest.ToProfile : interest.FromProfile;
-
-        if (actor.Role == other.Role)
+        if (accepter.Role == proposer.Role)
         {
             throw new DomainException("A deal needs one Lender and one Seeker.");
         }
 
-        if (other.IsFrozen)
+        if (proposer.IsFrozen)
         {
-            throw new DomainException($"{other.Name} cannot take on new deals right now.");
+            throw new DomainException($"{proposer.Name} cannot take on new deals right now.");
         }
 
-        var lender = actor.Role == ProfileRole.Lender ? actor : other;
-        var seeker = actor.Role == ProfileRole.Seeker ? actor : other;
-
-        var subType = await ResolveSubTypeAsync(dto.Category, dto.CategorySubTypeId, ct);
-
-        if (dto.Category == DealCategory.RawMaterial && string.IsNullOrWhiteSpace(dto.MaterialDescription))
+        // Terms can sit unanswered for a while, so the date is re-checked at the moment
+        // they are agreed rather than only when they were written.
+        if (proposal.EstimatedSettlementTime <= DateTimeOffset.UtcNow)
         {
-            throw new DomainException("Tell the other party what the material is.");
+            throw new DomainException(
+                "The settlement date in these terms has already passed. Answer with a new date instead.");
         }
+
+        var lender = accepter.Role == ProfileRole.Lender ? accepter : proposer;
+        var seeker = accepter.Role == ProfileRole.Seeker ? accepter : proposer;
 
         // There is deliberately no cap on simultaneous Open/Progress deals one profile can
         // hold across different counterparties (spec, Discovery).
@@ -111,17 +107,13 @@ public class DealService : IDealService
             LenderProfileId = lender.Id,
             SeekerProfileId = seeker.Id,
             InterestId = interest.Id,
-            Category = dto.Category,
-            CategorySubTypeId = subType?.Id,
-            Capacity = dto.Capacity,
-            CapacityUnit = string.IsNullOrWhiteSpace(dto.CapacityUnit)
-                ? subType?.DefaultUnit ?? "INR"
-                : dto.CapacityUnit.Trim(),
-            MaterialDescription = dto.Category == DealCategory.RawMaterial
-                ? dto.MaterialDescription!.Trim()
-                : null,
-            Description = dto.Description.Trim(),
-            EstimatedSettlementTime = dto.EstimatedSettlementTime,
+            Category = proposal.Category,
+            CategorySubTypeId = proposal.CategorySubTypeId,
+            Capacity = proposal.Capacity,
+            CapacityUnit = proposal.CapacityUnit,
+            MaterialDescription = proposal.MaterialDescription,
+            Description = proposal.Description,
+            EstimatedSettlementTime = proposal.EstimatedSettlementTime,
             // The deal is located where the Seeker is: that is where the material or money lands.
             Country = seeker.Country,
             LocationState = seeker.State,
@@ -136,8 +128,8 @@ public class DealService : IDealService
             DealId = deal.Id,
             FromState = null,
             ToState = DealState.Open,
-            TriggeredByProfileId = actor.Id,
-            Note = "Ticket raised, terms agreed."
+            TriggeredByProfileId = accepter.Id,
+            Note = $"Terms proposed by {proposer.Name} and agreed by {accepter.Name}."
         });
 
         await _db.SaveChangesAsync(ct);
@@ -149,12 +141,13 @@ public class DealService : IDealService
             .Where(m => m.InterestId == interest.Id && m.DealId == null)
             .ExecuteUpdateAsync(s => s.SetProperty(m => m.DealId, deal.Id), ct);
 
-        await _notifications.PushAsync(other.Id, NotificationKinds.DealRaised,
-            $"{actor.Name} raised a ticket",
-            $"Deal {deal.Reference} is now Open. Review the terms in the deal workspace.",
+        await _notifications.PushAsync(proposer.Id, NotificationKinds.DealRaised,
+            $"{accepter.Name} agreed your terms",
+            $"Deal {deal.Reference} is now Open, settling by "
+            + $"{deal.EstimatedSettlementTime:d MMM yyyy}.",
             $"/deals/{deal.Id}", ct);
 
-        var row = await LoadRowAsync(deal.Id, actor.Id, ct);
+        var row = await LoadRowAsync(deal.Id, accepter.Id, ct);
         await PublishStateAsync(deal, ct);
         return row;
     }

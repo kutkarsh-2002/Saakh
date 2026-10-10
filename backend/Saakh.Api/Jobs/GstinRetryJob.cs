@@ -72,6 +72,14 @@ public class GstinRetryJob
         profile.GstinLegalName = result.LegalName;
         profile.VerificationStatus = VerificationStatus.Active;
         profile.RejectionReason = null;
+
+        // The signup started Inactive because it was unapproved; the registry has now
+        // approved it, so it becomes visible.
+        if (profile.AvailabilityStatus == AvailabilityStatus.Inactive)
+        {
+            profile.AvailabilityStatus = AvailabilityStatus.Active;
+        }
+
         profile.UpdatedAt = DateTimeOffset.UtcNow;
 
         await _db.SaveChangesAsync();

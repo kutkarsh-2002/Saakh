@@ -37,20 +37,9 @@ public class DealLifecycleTests
 
         await seeker.PostAsync<InterestDto>($"/api/interests/{interest.Id}/respond", new { accept = true });
 
-        var (status, deal) = await lender.PostAsync<DealRowDto>("/api/deals/tickets", new
-        {
-            interestId = interest.Id,
-            category = DealCategory.RawMaterial,
-            categorySubTypeId = 10,
-            capacity = 500,
-            capacityUnit = "kg",
-            materialDescription = "Nagpur oranges, grade A",
-            description = "Weekly supply on 30-day credit.",
-            estimatedSettlementTime = DateTimeOffset.UtcNow.AddDays(30)
-        });
+        var deal = await ApiClient.OpenDealAsync(lender, seeker, interest.Id);
 
-        status.Should().Be(HttpStatusCode.OK);
-        return (lender, seeker, deal!);
+        return (lender, seeker, deal);
     }
 
     [Fact]
@@ -74,7 +63,7 @@ public class DealLifecycleTests
         var interest = await lender.PostOkAsync<InterestDto>(
             "/api/interests", new { toProfileId = seeker.ProfileId, note = (string?)null });
 
-        var status = await lender.PostStatusAsync("/api/deals/tickets", new
+        var status = await lender.PostStatusAsync("/api/deals/proposals", new
         {
             interestId = interest.Id,
             category = DealCategory.Money,
@@ -115,19 +104,9 @@ public class DealLifecycleTests
         await seeker.PostAsync<MessageDto>(
             $"/api/interests/{interest.Id}/messages", new { body = "Yes. Raise the ticket." });
 
-        var (_, deal) = await lender.PostAsync<DealRowDto>("/api/deals/tickets", new
-        {
-            interestId = interest.Id,
-            category = DealCategory.RawMaterial,
-            categorySubTypeId = 10,
-            capacity = 500,
-            capacityUnit = "kg",
-            materialDescription = "Oranges",
-            description = "Weekly supply.",
-            estimatedSettlementTime = DateTimeOffset.UtcNow.AddDays(30)
-        });
+        var deal = await ApiClient.OpenDealAsync(lender, seeker, interest.Id);
 
-        deal!.DealState.Should().Be(DealState.Open);
+        deal.DealState.Should().Be(DealState.Open);
 
         var (_, detail) = await seeker.GetAsync<DealDetailDto>($"/api/deals/{deal.Id}");
 
@@ -271,7 +250,7 @@ public class DealLifecycleTests
             await seeker.PostAsync<InterestDto>(
                 $"/api/interests/{interest.Id}/respond", new { accept = true });
 
-            var status = await lender.PostStatusAsync("/api/deals/tickets", new
+            var deal = await ApiClient.OpenDealAsync(lender, seeker, interest.Id, new
             {
                 interestId = interest.Id,
                 category = DealCategory.RawMaterial,
@@ -282,6 +261,8 @@ public class DealLifecycleTests
                 description = $"Deal {i}.",
                 estimatedSettlementTime = DateTimeOffset.UtcNow.AddDays(30)
             });
+
+            var status = HttpStatusCode.OK;
 
             status.Should().Be(HttpStatusCode.OK);
         }

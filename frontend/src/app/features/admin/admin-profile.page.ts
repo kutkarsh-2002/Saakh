@@ -2,7 +2,9 @@ import { ChangeDetectionStrategy, Component, computed, inject, input, signal } f
 import { MatDialog } from '@angular/material/dialog';
 import { Router, RouterLink } from '@angular/router';
 import { SaakhApi } from '../../core/api/saakh.api';
+import { EvidenceViewer } from '../../core/util/evidence-viewer';
 import {
+  EvidenceDocument,
   AdminActionType,
   AdminProfileDetail,
   AvailabilityStatus,
@@ -45,6 +47,7 @@ export class AdminProfilePage {
   readonly id = input.required<string>();
 
   private readonly api = inject(SaakhApi);
+  private readonly evidenceViewer = inject(EvidenceViewer);
   private readonly dialog = inject(MatDialog);
   private readonly toast = inject(ToastService);
   private readonly router = inject(Router);
@@ -120,8 +123,8 @@ export class AdminProfilePage {
     return formatCapacity(capacity, unit, category);
   }
 
-  evidenceUrl(id: string): string {
-    return this.api.evidenceUrl(id);
+  openEvidence(document: EvidenceDocument): void {
+    this.evidenceViewer.open(document);
   }
 
   // ---- verification --------------------------------------------------------

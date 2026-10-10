@@ -23,7 +23,7 @@ public class TrustStatsService : ITrustStatsService
 
     public TrustStatsService(SaakhDbContext db) => _db = db;
 
-    public static TrustSummaryDto Empty => new(0, 0, 0, 0, 0, null, [0, 0, 0, 0, 0], 0);
+    public static TrustSummaryDto Empty => new(0, 0, 0, 0, 0, null, [0, 0, 0, 0, 0], 0, 0);
 
     public async Task<TrustSummaryDto> ForOneAsync(Guid profileId, CancellationToken ct = default)
     {
@@ -47,7 +47,8 @@ public class TrustStatsService : ITrustStatsService
                 d.LenderProfileId,
                 d.SeekerProfileId,
                 d.State,
-                d.HaltedByProfileId
+                d.HaltedByProfileId,
+                d.ClosedOverdue
             })
             .ToListAsync(ct);
 
@@ -86,6 +87,13 @@ public class TrustStatsService : ITrustStatsService
                 {
                     acc.HaltsAtFault++;
                 }
+
+                // A deal the platform closed for passing its agreed settlement date is
+                // recorded against both sides: they agreed that date together.
+                if (row.ClosedOverdue)
+                {
+                    acc.DealsClosedOverdue++;
+                }
             }
         }
 
@@ -109,7 +117,8 @@ public class TrustStatsService : ITrustStatsService
                 kv.Value.RatingCount,
                 kv.Value.RatingCount == 0 ? null : Math.Round((double)kv.Value.StarSum / kv.Value.RatingCount, 2),
                 kv.Value.StarCounts,
-                kv.Value.HaltsAtFault));
+                kv.Value.HaltsAtFault,
+                kv.Value.DealsClosedOverdue));
     }
 
     private class Accumulator
@@ -121,6 +130,7 @@ public class TrustStatsService : ITrustStatsService
         public int RatingCount;
         public int StarSum;
         public int HaltsAtFault;
+        public int DealsClosedOverdue;
         public readonly int[] StarCounts = new int[5];
     }
 }

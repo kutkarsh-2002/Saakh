@@ -6,6 +6,7 @@ import { SaakhApi } from '../../core/api/saakh.api';
 import { AuthApi } from '../../core/api/auth.api';
 import { SessionStore } from '../../core/auth/session.store';
 import {
+  GSTIN_PATTERN,
   AvailabilityStatus,
   BusinessSize,
   CategorySubType,
@@ -20,6 +21,7 @@ import { BUSINESS_SIZE_LABEL, CATEGORY_META, ROLE_META } from '../../core/models
 import { INDIAN_STATES } from '../../core/models/locations';
 import { RealtimeService } from '../../core/realtime/realtime.service';
 import { formatDate, formatDateTime, formatRange } from '../../core/util/format';
+import { controlSignal } from '../../core/util/forms';
 import { ToastService } from '../../core/util/toast.service';
 import { PageHeader } from '../../shared/ui';
 import { StatusPill } from '../../shared/status-pill';
@@ -29,14 +31,24 @@ import { VerificationBanner } from '../../shared/verification-banner';
 
 /** What an admin will accept as proof. The spec leaves this open, so the list is
  *  stated here as a concrete, reviewable set rather than left vague for users. */
+/**
+ * What a reviewer is actually being asked to look at, in three groups rather than a
+ * list of specific papers. A vendor who holds something that proves the same thing by
+ * a different name was previously stuck choosing the nearest wrong option.
+ */
 const EVIDENCE_TYPES = [
-  'Shop or trade licence',
-  'Aadhaar card',
-  'PAN card',
-  'Electricity or utility bill',
-  'Rental agreement for the premises',
-  'Bank statement showing the business name',
+  'Legal document',
+  'Tax document',
+  'Operational document',
 ];
+
+/** What each group covers, shown under the picker so the choice is obvious. */
+export const EVIDENCE_TYPE_HINTS: Record<string, string> = {
+  'Legal document': 'Shop or trade licence, registration certificate, rental agreement for the premises.',
+  'Tax document': 'PAN card, GST registration certificate, a recent tax filing.',
+  'Operational document':
+    'Electricity or utility bill, bank statement showing the business name, a supplier invoice.',
+};
 
 /**
  * Profile & verification: the one tab an unverified account can open.
@@ -95,6 +107,32 @@ export class ProfilePage {
   readonly selectedFiles = signal<File[]>([]);
   readonly documentType = signal(EVIDENCE_TYPES[0]);
 
+  readonly documentTypeHint = computed(() => EVIDENCE_TYPE_HINTS[this.documentType()] ?? '');
+
+  /**
+   * Whether this profile can actually be found. Both gates have to be open, so an
+   * unapproved account reads as Inactive however its availability flag is stored —
+   * the toggle shows where the account stands, not what one of two fields says.
+   */
+  readonly visibleInSearch = computed(() => {
+    const me = this.profile();
+    return (
+      !!me &&
+      me.verificationStatus === VerificationStatus.Active &&
+      me.availabilityStatus === AvailabilityStatus.Active
+    );
+  });
+
+  /**
+   * Adding a GSTIN after signup. Kept outside the edit form: this is not an edit to
+   * a detail, it is the one route that can open a locked account without a reviewer.
+   */
+  readonly gstinInput = signal('');
+  readonly gstinTouched = signal(false);
+  readonly verifyingGstin = signal(false);
+
+  readonly gstinWellFormed = computed(() => GSTIN_PATTERN.test(this.gstinInput()));
+
   /** Set when the user was bounced here by the verified guard from a locked tab. */
   readonly blockedFrom = signal<string | null>(null);
 
@@ -111,17 +149,22 @@ export class ProfilePage {
     ownTradeDescription: [''],
   });
 
+  // Read as signals, not as `.value` inside a computed — see `controlSignal`.
+  private readonly selectedState = controlSignal(this.form.controls.state);
+  private readonly selectedCategory = controlSignal(this.form.controls.category);
+  private readonly selectedSubTypeId = controlSignal(this.form.controls.categorySubTypeId);
+
   readonly districts = computed(() => {
-    const state = this.form.controls.state.value;
+    const state = this.selectedState();
     return this.states.find((option) => option.name === state)?.districts ?? [];
   });
 
   readonly subTypes = computed(() =>
-    this.taxonomy().filter((option) => option.category === this.form.controls.category.value),
+    this.taxonomy().filter((option) => option.category === this.selectedCategory()),
   );
 
   readonly capacityUnit = computed(() => {
-    const id = this.form.controls.categorySubTypeId.value;
+    const id = this.selectedSubTypeId();
     return this.taxonomy().find((option) => option.id === id)?.defaultUnit ?? 'INR';
   });
 
@@ -167,6 +210,45 @@ export class ProfilePage {
     this.api.verificationState().subscribe({
       next: (state) => this.verification.set(state),
       error: () => undefined,
+    });
+  }
+
+  onGstinInput(event: Event): void {
+    const value = (event.target as HTMLInputElement).value.toUpperCase().replace(/\s/g, '');
+    this.gstinInput.set(value);
+    this.gstinTouched.set(true);
+  }
+
+  addGstin(): void {
+    if (!this.gstinWellFormed() || this.verifyingGstin()) {
+      return;
+    }
+
+    this.verifyingGstin.set(true);
+
+    this.api.addGstin(this.gstinInput()).subscribe({
+      next: (result) => {
+        this.verifyingGstin.set(false);
+
+        if (result.verified) {
+          this.gstinInput.set('');
+          this.gstinTouched.set(false);
+          this.toast.success(`${result.message} Your account is open.`);
+          // Re-read the session so the shell unlocks the tabs straight away rather
+          // than on the next navigation.
+          this.auth.session().subscribe({ error: () => undefined });
+        } else {
+          // The registry was down. The number is saved and retried, so say so
+          // rather than leaving the field looking like it failed.
+          this.toast.info(result.message);
+        }
+
+        this.load();
+      },
+      error: (error: unknown) => {
+        this.verifyingGstin.set(false);
+        this.toast.error(error);
+      },
     });
   }
 

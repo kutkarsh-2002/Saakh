@@ -11,7 +11,7 @@ namespace Saakh.Api.Services;
 
 public interface IAuthService
 {
-    Task<OtpRequestResultDto> RequestOtpAsync(string phone, CancellationToken ct = default);
+    Task<OtpRequestResultDto> RequestOtpAsync(string phone, string? email, CancellationToken ct = default);
 
     Task<bool> VerifyOtpAsync(string phone, string code, CancellationToken ct = default);
 
@@ -51,18 +51,29 @@ public class AuthService : IAuthService
         _log = log;
     }
 
-    public async Task<OtpRequestResultDto> RequestOtpAsync(string phone, CancellationToken ct = default)
+    public async Task<OtpRequestResultDto> RequestOtpAsync(string phone, string? email,
+        CancellationToken ct = default)
     {
         if (!LooksLikePhone(phone))
         {
             throw new DomainException("Enter a 10-digit mobile number.");
         }
 
-        var code = await _otp.RequestAsync(phone, ct);
+        var issue = await _otp.RequestAsync(new OtpRecipient(phone, email), ct);
 
-        return new OtpRequestResultDto(true,
-            $"We sent a 6-digit code to {phone}. It expires in 10 minutes.",
-            code);
+        var minutes = Math.Max(1, issue.ExpiresInSeconds / 60);
+
+        // Named rather than assumed: a code that went to an inbox must not say it was
+        // texted, or the user waits at the wrong screen.
+        var where = _otp.Destination;
+
+        var message = issue.Sent
+            ? $"We sent a 6-digit code to {where}. It expires in {minutes} minute{(minutes == 1 ? "" : "s")}."
+            : $"A code is already on its way to {where}. You can ask for another one in "
+              + $"{issue.RetryAfterSeconds} second{(issue.RetryAfterSeconds == 1 ? "" : "s")}.";
+
+        return new OtpRequestResultDto(issue.Sent, message, issue.Code,
+            issue.RetryAfterSeconds, issue.ExpiresInSeconds);
     }
 
     public async Task<bool> VerifyOtpAsync(string phone, string code, CancellationToken ct = default)
@@ -94,16 +105,6 @@ public class AuthService : IAuthService
         if (await _users.FindByEmailAsync(dto.Email) is not null)
         {
             throw DomainException.Conflict("An account already exists for that email address.");
-        }
-
-        // Phone OTP is mandatory at signup on both verification paths (spec, Registration).
-        if (!_otp.IsVerified(dto.Phone))
-        {
-            var verified = await _otp.VerifyAsync(dto.Phone, dto.OtpCode ?? string.Empty, ct);
-            if (!verified)
-            {
-                throw new DomainException("Verify your mobile number before creating the account.");
-            }
         }
 
         var subType = dto.CategorySubTypeId is null
@@ -188,7 +189,13 @@ public class AuthService : IAuthService
             GstinVerifiedAt = gstinVerifiedAt,
             GstinLegalName = legalName,
             VerificationStatus = status,
-            AvailabilityStatus = AvailabilityStatus.Active,
+            // An account that still needs approving is not discoverable anyway, so
+            // starting it Active would have the Profile claim "visible in search"
+            // while the gate hides it. It starts Inactive and is switched on at the
+            // moment approval actually makes it visible.
+            AvailabilityStatus = status == VerificationStatus.Active
+                ? AvailabilityStatus.Active
+                : AvailabilityStatus.Inactive,
             Country = dto.Country.Trim(),
             State = dto.State.Trim(),
             District = dto.District.Trim(),
@@ -207,8 +214,6 @@ public class AuthService : IAuthService
 
         _db.Profiles.Add(profile);
         await _db.SaveChangesAsync(ct);
-
-        _otp.Consume(dto.Phone);
 
         if (scheduleRetry)
         {

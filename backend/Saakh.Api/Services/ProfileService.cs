@@ -1,3 +1,4 @@
+using Hangfire;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Saakh.Api.Configuration;
@@ -6,6 +7,7 @@ using Saakh.Api.Domain;
 using Saakh.Api.Dtos;
 using Saakh.Api.Mapping;
 using Saakh.Api.Hubs;
+using Saakh.Api.Jobs;
 
 namespace Saakh.Api.Services;
 
@@ -17,6 +19,13 @@ public interface IProfileService
 
     /// <summary>Self-service Active/Inactive toggle from account settings (spec, Profile).</summary>
     Task<ProfileSummaryDto> SetAvailabilityAsync(Profile actor, bool active, CancellationToken ct = default);
+
+    /// <summary>
+    /// Adds a GSTIN to an account that signed up without one. A verified number
+    /// is the same proof of identity it is at signup, so it opens the account
+    /// immediately rather than sending it to the review queue.
+    /// </summary>
+    Task<AddGstinResultDto> AddGstinAsync(Profile actor, string gstin, CancellationToken ct = default);
 
     Task<ProfileSummaryDto> PublicAsync(Guid profileId, CancellationToken ct = default);
 
@@ -36,16 +45,23 @@ public class ProfileService : IProfileService
     private readonly ITrustStatsService _trust;
     private readonly IFileStorageService _storage;
     private readonly IRealtimePublisher _realtime;
+    private readonly IGstinVerifier _gstin;
+    private readonly INotificationService _notifications;
+    private readonly IBackgroundJobClient _jobs;
     private readonly StorageOptions _storageOptions;
 
     public ProfileService(SaakhDbContext db, ITrustStatsService trust,
         IFileStorageService storage, IRealtimePublisher realtime,
+        IGstinVerifier gstin, INotificationService notifications, IBackgroundJobClient jobs,
         IOptions<StorageOptions> storageOptions)
     {
         _db = db;
         _trust = trust;
         _storage = storage;
         _realtime = realtime;
+        _gstin = gstin;
+        _notifications = notifications;
+        _jobs = jobs;
         _storageOptions = storageOptions.Value;
     }
 
@@ -79,7 +95,9 @@ public class ProfileService : IProfileService
         }
 
         actor.Name = dto.Name.Trim();
-        actor.IsBusiness = dto.IsBusiness;
+        // A verified GSTIN *is* a business registration, so the answer is settled and the
+        // client does not offer the choice. Enforced here too: the API is the boundary.
+        actor.IsBusiness = actor.GstinVerifiedAt is not null || dto.IsBusiness;
         actor.BusinessSize = dto.BusinessSize;
         actor.Country = dto.Country.Trim();
         actor.State = dto.State.Trim();
@@ -113,6 +131,15 @@ public class ProfileService : IProfileService
                 "An administrator has restricted this profile. The Active/Inactive toggle is unavailable.");
         }
 
+        // Switching to Active before approval would claim a visibility the verification
+        // gate does not grant, which is a worse answer than refusing.
+        if (active && actor.VerificationStatus != VerificationStatus.Active)
+        {
+            throw new DomainException(
+                "Your account is not approved yet, so it cannot appear in search. "
+                + "It becomes visible on its own as soon as it is approved.");
+        }
+
         // Existing in-flight deals continue unaffected either way (spec, Profile).
         actor.AvailabilityStatus = active ? AvailabilityStatus.Active : AvailabilityStatus.Inactive;
         actor.UpdatedAt = DateTimeOffset.UtcNow;
@@ -120,6 +147,104 @@ public class ProfileService : IProfileService
 
         var trust = await _trust.ForOneAsync(actor.Id, ct);
         return actor.ToSummary(trust, revealPrivateDetails: true);
+    }
+
+    public async Task<AddGstinResultDto> AddGstinAsync(Profile actor, string gstin,
+        CancellationToken ct = default)
+    {
+        if (actor.AvailabilityStatus == AvailabilityStatus.Removed)
+        {
+            throw DomainException.Forbidden("This profile has been removed and can no longer be edited.");
+        }
+
+        // A verified GSTIN is the identity the whole trust record is anchored to, so it
+        // is added once and never swapped. This endpoint fills a gap, it does not edit.
+        if (actor.GstinVerifiedAt is not null)
+        {
+            throw new DomainException(
+                "Your GSTIN is already verified. It is the identity your trust record is "
+                + "anchored to, so it cannot be changed.");
+        }
+
+        var normalized = GstinFormat.Normalize(gstin);
+
+        if (!GstinFormat.IsWellFormed(normalized))
+        {
+            // Checked locally first so a typo never spends a provider credit.
+            throw new DomainException("That is not a valid GSTIN. It is 15 characters, like 27AAPFU0939F1ZV.");
+        }
+
+        var taken = await _db.Profiles
+            .AnyAsync(p => p.Id != actor.Id && p.Gstin == normalized && p.GstinVerifiedAt != null, ct);
+
+        if (taken)
+        {
+            throw new DomainException("That GSTIN is already verified on another Saakh account.");
+        }
+
+        var check = await _gstin.VerifyAsync(normalized, ct);
+
+        if (check.TransientFailure)
+        {
+            // The registry was unreachable, which is not the vendor's fault. Keep the
+            // number and let the retry job finish the job, exactly as signup does.
+            actor.Gstin = normalized;
+            actor.UpdatedAt = DateTimeOffset.UtcNow;
+            await _db.SaveChangesAsync(ct);
+
+            _jobs.Schedule<GstinRetryJob>(job => job.RetryAsync(actor.Id), TimeSpan.FromMinutes(2));
+
+            return new AddGstinResultDto(false, true,
+                "The GSTIN registry is not responding right now. We have saved your number and "
+                + "will keep trying — you do not need to do anything.",
+                actor.ToSummary(await _trust.ForOneAsync(actor.Id, ct), revealPrivateDetails: true));
+        }
+
+        if (!check.IsValid)
+        {
+            throw new DomainException(check.Message ?? "That GSTIN could not be verified.");
+        }
+
+        var wasLocked = actor.VerificationStatus != VerificationStatus.Active;
+
+        actor.Gstin = normalized;
+        actor.GstinVerifiedAt = DateTimeOffset.UtcNow;
+        actor.GstinLegalName = check.LegalName;
+        // A verified GSTIN is a registered business by definition.
+        actor.IsBusiness = true;
+        actor.VerificationStatus = VerificationStatus.Active;
+        actor.RejectionReason = null;
+
+        // Verified by the registry is approved, so the account becomes visible.
+        if (actor.AvailabilityStatus == AvailabilityStatus.Inactive)
+        {
+            actor.AvailabilityStatus = AvailabilityStatus.Active;
+        }
+
+        actor.UpdatedAt = DateTimeOffset.UtcNow;
+
+        await _db.SaveChangesAsync(ct);
+
+        if (wasLocked)
+        {
+            await _notifications.PushAsync(actor.Id, NotificationKinds.VerificationApproved,
+                "Your GSTIN has been verified",
+                "Your identity is confirmed against the government registry. You now have full access.",
+                "/dashboard", ct);
+
+            // Unlocks the tabs in the open tab without a reload, the same push an
+            // administrator's approval sends.
+            await _realtime.ToProfileAsync(actor.Id, HubEvents.VerificationChanged,
+                new { status = VerificationStatus.Active });
+        }
+
+        var trust = await _trust.ForOneAsync(actor.Id, ct);
+
+        return new AddGstinResultDto(true, false,
+            check.LegalName is null
+                ? "Your GSTIN is verified."
+                : $"Verified against the registry as {check.LegalName}.",
+            actor.ToSummary(trust, revealPrivateDetails: true));
     }
 
     public async Task<ProfileSummaryDto> PublicAsync(Guid profileId, CancellationToken ct = default)

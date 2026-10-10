@@ -159,6 +159,7 @@ public class Interest
 
     public ICollection<Message> Messages { get; set; } = new List<Message>();
     public ICollection<Deal> Deals { get; set; } = new List<Deal>();
+    public ICollection<DealProposal> Proposals { get; set; } = new List<DealProposal>();
 
     /// <summary>Chat unlocks only once the interest is accepted (spec §7).</summary>
     public bool ChatUnlocked => Status == InterestStatus.Accepted;
@@ -217,6 +218,16 @@ public class Deal
     /// <summary>Settlement needs both parties to confirm before the deal moves to Completed.</summary>
     public bool LenderConfirmedSettlement { get; set; }
     public bool SeekerConfirmedSettlement { get; set; }
+
+    /// <summary>
+    /// Set when the platform closed this deal because the agreed settlement date came
+    /// and went. It is recorded against both parties, who together committed to that
+    /// date — it is not a halt, so nobody is marked as having triggered it.
+    /// </summary>
+    public bool ClosedOverdue { get; set; }
+
+    /// <summary>When the parties were warned the date had passed, so they are warned once.</summary>
+    public DateTimeOffset? OverdueWarningSentAt { get; set; }
 
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
     public DateTimeOffset? ClosedAt { get; set; }
@@ -377,6 +388,62 @@ public class ResumeRequest
 
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
     public DateTimeOffset? RespondedAt { get; set; }
+}
+
+/// <summary>
+/// Terms one party has put to the other, before any deal exists.
+///
+/// Raising a ticket proposes terms rather than creating the deal: both sides have to
+/// agree what is being traded, how much, and by when. Disagreement is answered with a
+/// counter-proposal, which supersedes the one before it, so the chain is readable as a
+/// negotiation. Nothing here touches either party's trust record — failing to agree on
+/// terms is not a failure to trade.
+/// </summary>
+public class DealProposal
+{
+    public Guid Id { get; set; }
+
+    /// <summary>The accepted interest this negotiation belongs to.</summary>
+    public Guid InterestId { get; set; }
+    public Interest Interest { get; set; } = null!;
+
+    public Guid ProposedByProfileId { get; set; }
+    public Profile ProposedByProfile { get; set; } = null!;
+
+    // ---- the terms being proposed ----
+    public DealCategory Category { get; set; }
+
+    public int? CategorySubTypeId { get; set; }
+    public CategorySubType? CategorySubType { get; set; }
+
+    public decimal Capacity { get; set; }
+
+    public string CapacityUnit { get; set; } = "INR";
+
+    public string? MaterialDescription { get; set; }
+
+    public string Description { get; set; } = string.Empty;
+
+    /// <summary>
+    /// The date both parties are agreeing to. It is the one term the platform later
+    /// enforces on its own, so it is agreed rather than declared by one side.
+    /// </summary>
+    public DateTimeOffset EstimatedSettlementTime { get; set; }
+
+    public ProposalStatus Status { get; set; } = ProposalStatus.Pending;
+
+    /// <summary>The counter-proposal that replaced this one, if it was answered with amended terms.</summary>
+    public Guid? SupersededByProposalId { get; set; }
+    public DealProposal? SupersededByProposal { get; set; }
+
+    /// <summary>Set once accepted: the deal these terms produced.</summary>
+    public Guid? DealId { get; set; }
+    public Deal? Deal { get; set; }
+
+    public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
+    public DateTimeOffset? RespondedAt { get; set; }
+
+    public bool IsOpen => Status == ProposalStatus.Pending;
 }
 
 /// <summary>In-app notification fanned out over SignalR and persisted so it survives a reload.</summary>

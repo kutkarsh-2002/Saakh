@@ -153,26 +153,53 @@ import { formatDateTime } from '../core/util/format';
 export class DealTimeline {
   readonly history = input.required<DealStateHistory[]>();
 
-  readonly entries = computed(() =>
-    this.history().map((entry) => {
+  readonly entries = computed(() => {
+    const history = this.history();
+
+    return history.map((entry, index) => {
       const descriptor = DEAL_STATE_STATUS[entry.toState];
       // The API records settlement confirmations as same-state rows, so the
       // timeline can show "waiting on the other party" without inventing a state.
       const isNote = entry.fromState !== null && entry.fromState === entry.toState;
 
+      // Once the other party has confirmed, a first confirmation is no longer
+      // waiting on anybody. The row stays — it is what happened — but it is
+      // rewritten in the past tense, because a settled deal that still says
+      // "waiting on the other party" reads as something left undone.
+      const settled = history
+        .slice(index + 1)
+        .some((later) => later.toState === DealState.Completed);
+
       return {
         id: entry.id,
         token: isNote ? 'inactive' : descriptor.token,
         icon: isNote ? 'how_to_reg' : descriptor.icon,
-        label: isNote ? 'Settlement confirmed by one party' : labelFor(entry.fromState, entry.toState),
-        note: entry.note,
+        label:
+          isNote && settled
+            ? 'Settlement confirmed — first party'
+            : isNote
+              ? 'Settlement confirmed by one party'
+              : labelFor(entry.fromState, entry.toState),
+        note: isNote && settled ? settledNote(entry) : entry.note,
         actor: entry.triggeredByName,
         occurredAt: entry.occurredAt,
         when: formatDateTime(entry.occurredAt),
         isNote,
+        settled: isNote && settled,
       };
-    }),
-  );
+    });
+  });
+}
+
+/**
+ * The server's note is written at the moment of the first confirmation, when
+ * the wait was real. Replaying it on a completed deal would be misleading, so
+ * the same fact is restated for a reader who already knows how it ended.
+ */
+function settledNote(entry: DealStateHistory): string {
+  return entry.triggeredByName
+    ? `${entry.triggeredByName} confirmed settlement first.`
+    : 'One party confirmed settlement first.';
 }
 
 function labelFor(from: DealState | null, to: DealState): string {

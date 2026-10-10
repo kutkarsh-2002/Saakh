@@ -27,6 +27,7 @@ export const trust = (overrides: Partial<TrustSummary> = {}): TrustSummary => ({
   averageStars: 4.3,
   starCounts: [0, 0, 1, 3, 5],
   haltsAtFault: 0,
+  dealsClosedOverdue: 0,
   ...overrides,
 });
 
@@ -112,5 +113,6 @@ export const deal = (overrides: Partial<DealRow> = {}): DealRow => ({
   canRate: false,
   pendingResumeRequest: null,
   frozen: false,
+  closedOverdue: false,
   ...overrides,
 });

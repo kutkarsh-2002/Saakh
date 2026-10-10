@@ -35,6 +35,31 @@ public static class DealMappers
             rating.Comment,
             rating.CreatedAt);
 
+    /// <summary>
+    /// Terms, with whose turn it is worked out for the viewer rather than left to the
+    /// client: both screens that show this have to agree on who can act.
+    /// </summary>
+    public static DealProposalDto ToDto(this DealProposal proposal, Guid viewerProfileId,
+        TrustSummaryDto proposerTrust) =>
+        new(
+            proposal.Id,
+            proposal.InterestId,
+            proposal.ProposedByProfile.ToSummary(proposerTrust),
+            proposal.ProposedByProfileId == viewerProfileId,
+            proposal.Category,
+            proposal.CategorySubType?.ToDto(),
+            proposal.Capacity,
+            proposal.CapacityUnit,
+            proposal.MaterialDescription,
+            proposal.Description,
+            proposal.EstimatedSettlementTime,
+            proposal.Status,
+            proposal.Status == ProposalStatus.Pending
+                && proposal.ProposedByProfileId != viewerProfileId,
+            proposal.DealId,
+            proposal.CreatedAt,
+            proposal.RespondedAt);
+
     public static DealStateHistoryDto ToDto(this DealStateHistory entry) =>
         new(
             entry.Id,
@@ -110,6 +135,7 @@ public static class DealMappers
             // Rating opens once the deal is Completed or Halted, one per party.
             deal.IsClosed && ratingGiven is null,
             pendingResume?.ToDto(viewerProfileId),
-            frozen);
+            frozen,
+            deal.ClosedOverdue);
     }
 }

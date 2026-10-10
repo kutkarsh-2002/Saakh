@@ -21,8 +21,9 @@ public record InterestDto(
     int UnreadMessages);
 
 /// <summary>
-/// The ticket raised once both sides agree. Branches by category: Money carries an amount and
-/// currency, Raw Material a quantity, unit and material description (spec, Interest to Deal).
+/// Terms put to the other party. Branches by category: Money carries an amount and
+/// currency, Raw Material a quantity, unit and material description (spec, Interest to
+/// Deal). Accepting these creates the deal; countering them replaces them.
 /// </summary>
 public record RaiseTicketDto(
     Guid InterestId,
@@ -33,6 +34,31 @@ public record RaiseTicketDto(
     string? MaterialDescription,
     string Description,
     DateTimeOffset EstimatedSettlementTime);
+
+/// <summary>A set of proposed terms, with enough context to answer it.</summary>
+public record DealProposalDto(
+    Guid Id,
+    Guid InterestId,
+    ProfileSummaryDto ProposedBy,
+    bool ProposedByMe,
+    DealCategory Category,
+    CategorySubTypeDto? SubType,
+    decimal Capacity,
+    string CapacityUnit,
+    string? MaterialDescription,
+    string Description,
+    DateTimeOffset EstimatedSettlementTime,
+    ProposalStatus Status,
+    /// <summary>True when it is this viewer's turn to accept or counter.</summary>
+    bool AwaitingMyResponse,
+    Guid? DealId,
+    DateTimeOffset CreatedAt,
+    DateTimeOffset? RespondedAt);
+
+/// <summary>The live proposal for an interest, plus the chain that led to it.</summary>
+public record ProposalThreadDto(
+    DealProposalDto? Live,
+    IReadOnlyList<DealProposalDto> History);
 
 public record DealStateHistoryDto(
     Guid Id,
@@ -108,7 +134,9 @@ public record DealRowDto(
     bool CanRate,
     ResumeRequestDto? PendingResumeRequest,
     // True while either side is suspended or removed, freezing transitions (spec, Admin).
-    bool Frozen);
+    bool Frozen,
+    /// <summary>The platform closed this deal because the agreed settlement date passed.</summary>
+    bool ClosedOverdue);
 
 /// <summary>Full deal workspace payload: ticket terms, timeline and chat in one call.</summary>
 public record DealDetailDto(
